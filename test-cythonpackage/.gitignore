@@ -1,0 +1,15 @@
+*.c
+*.so
+__pycache__
+.idea
+.env
+.~*
+PPR*
+venv/
+.pytest_cache
+build/
+dist/
+.eggs/
+*.egg-info/
+AUTHORS
+ChangeLog
