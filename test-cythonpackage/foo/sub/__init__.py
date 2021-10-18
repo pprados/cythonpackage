@@ -1,2 +1,1 @@
-import cythonpackage
-# FIXME cythonpackage.init(__name__)
+print("__Init__ from sub")

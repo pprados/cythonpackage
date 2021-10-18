@@ -65,8 +65,7 @@ clean:
 test: bdist
 	export PIP_EXTRA_INDEX_URL=https://pypi.org/simple
 	export PIP_INDEX_URL=https://test.pypi.org/simple
-	pip install --force-reinstall dist/*.whl
-	read -p '...'
+	#pip install -e .
 	cd test-cythonpackage
 	rm -Rf build dist
 	python setup.py bdist_wheel
@@ -77,6 +76,7 @@ test: bdist
 	python -c 'import foo.sub.sub; foo.sub.sub.print_me()'
 	python -c 'import foo2.bar_c; foo2.bar_c.print_me()'
 	python -c 'import foo2.bar_d; foo2.bar_d.print_me()'
+	python -c 'import foo3.bar_e; foo3.bar_e.print_me()' | true
 
 
 # --------------------------- Distribution

@@ -16,26 +16,19 @@
 import importlib
 import sys
 from pathlib import Path
-from typing import List, Union, Tuple, Optional
+from typing import List, Tuple, Optional
 
 from Cython.Build import cythonize
 from setuptools import Extension
 from setuptools.command.build_py import build_py as original_build_py
 
-
-def _compile_package(package_path: Union[str, Path]) -> List[Extension]:
-    package_path = str(package_path).replace('.', '/')  # FIXME
-    sourcefiles = [str(path) for path in Path(package_path).rglob('*.pyx')]
-    sourcefiles += [str(path) for path in Path(package_path).rglob('*.py')
-                    if path.name not in ["__init__.py", "__compile__.py"]]
-    sourcefiles.append(package_path + "/__compile__.py")
-    # print(f'Extension(name="{package_path}.__compile__", sources={sourcefiles})')
-    if not sourcefiles:
-        return []
-    return [Extension(
-        name=f"{package_path}.__compile__",
-        sources=sourcefiles,
-    )]
+_conf = {
+    "inject_ext_modules": True,
+    "inject_init": True,
+    "remove_source": True,
+    "compile_pyc": True,
+    "optimize": 2,
+}
 
 
 def _compile_packages(packages: List[str]) -> List[Extension]:
@@ -43,7 +36,17 @@ def _compile_packages(packages: List[str]) -> List[Extension]:
     for package in packages:
         root = Path(package, "__compile__.py")
         if root.exists():
-            extensions += _compile_package(root.parent)
+            package_path = str(root.parent)
+            sourcefiles = [str(path) for path in Path(package_path).rglob('*.pyx')]
+            sourcefiles += [str(path) for path in Path(package_path).rglob('*.py')
+                            if path.name not in ["__init__.py", "__compile__.py"]]
+            sourcefiles.append(package_path + "/__compile__.py")
+            # print(f'Extension(name="{package_path}.__compile__", sources={sourcefiles})')
+            if sourcefiles:
+                extensions.append(Extension(
+                    name=f"{package_path}.__compile__",
+                    sources=sourcefiles,
+                ))
     return extensions
 
 
@@ -60,42 +63,74 @@ class _CythonPackageMetaPathFinder(importlib.abc.MetaPathFinder):
             return importlib.machinery.ExtensionFileLoader(fullname, self._file)
 
 
-_compile_pyc = [False]
-_optimize = 2
-
-
 class _build_py(original_build_py):
     """ build_py to remove the source file for compiled package """
 
     def finalize_options(self):
         super().finalize_options()
-        self.compile = _compile_pyc[0]
-        self.optimize = _optimize
+        self.compile = _conf["compile_pyc"]
+        self.optimize = _conf["optimize"]
+        self.remove_source = _conf["remove_source"]
+        self.inject_init = _conf["inject_init"]
+        self._patched_init = []
 
     def find_package_modules(self, package: str, package_dir: str) -> List[Tuple[str, str, str]]:
         modules: List[Tuple[str, str, str]] = super().find_package_modules(package, package_dir)
-        filtered_modules = []
-        for (pkg, mod, filepath) in modules:
-            _path = Path(filepath)
-            if (_path.suffix in [".py", ".pyx"] and
-                    "__init__.py" != _path.name and
-                    Path(_path.parent, "__compile__.py").exists()):  # FIXME: vérifier dans les sous packages
-                continue
-            filtered_modules.append((pkg, mod, filepath,))
-        return filtered_modules
+        if self.remove_source:
+            filtered_modules = []
+            for (pkg, mod, filepath) in modules:
+                _path = Path(filepath)
+                if (_path.suffix in [".py", ".pyx"] and
+                        "__init__.py" != _path.name and
+                        Path(_path.parent, "__compile__.py").exists()):
+                    continue
+                filtered_modules.append((pkg, mod, filepath,))
+            return filtered_modules
+        else:
+            return modules
 
     def find_data_files(self, package, src_dir):
         """Return filenames for package's data files in 'src_dir'"""
         # Remove the source code via the data_files
-        filtered_datas: List[str] = []
-        for f in super().find_data_files(package, src_dir):
-            _path = Path(f)
-            if (_path.suffix in [".c", ".py", ".pyx"] and
-                    "__init__.py" != _path.name and
-                    Path(_path.parent, "__compile__.py").exists()):  # FIXME: vérifier dans les sous packages
-                continue
-            filtered_datas.append(f)
-        return filtered_datas
+        data_files = super().find_data_files(package, src_dir)
+        if self.remove_source:
+            filtered_datas: List[str] = []
+            for f in data_files:
+                _path = Path(f)
+                if (_path.suffix in [".c", ".py", ".pyx"] and
+                        # "__init__.py" != _path.name and
+                        Path(_path.parent, "__compile__.py").exists()):
+                    continue
+                filtered_datas.append(f)
+            return filtered_datas
+        else:
+            return data_files
+
+    def build_module(self, module, module_file, package):
+        outfile, copied = super().build_module(module, module_file, package)
+        inject="import cythonpackage; cythonpackage.init(__name__);"
+        if self.inject_init:
+            if outfile.endswith("__init__.py"):
+                package_file = package.replace('.', '/')
+                if outfile.endswith("__init__.py") and Path(package_file, "__compile__.py").exists():
+                    # Patch the __init__.py inject the initialisation
+                    with open(outfile) as f:
+                        lines = f.readlines()
+                    update= False
+                    for i, line in enumerate(lines):
+                        if line.strip().startswith("#"):
+                            continue
+                        if not line.startswith(inject):
+                            lines[i] = inject + line
+                            update = True
+                        break
+                    else:
+                        lines.append(inject)
+                        update = True
+                    if update:
+                        with open(outfile, "w") as f:
+                            f.writelines(lines)
+        return outfile, copied
 
 
 # TODO: injection auto dans __init__
@@ -108,34 +143,28 @@ class _build_py(original_build_py):
 # voir la gesion multi os https://github.com/pypa/cibuildwheel
 def cythonpackage(dist, attr, value):
     """ Plugin for setuptools """
+    global _conf
     if not value:
         return
     if isinstance(value, dict):
-        inject_ext_modules = value.get("inject_ext_modules", True)
-        remove_source = value.get("remove_source", True)
-        compile_pyc = value.get("compile_pyc", "true")
-        if isinstance(compile_pyc, str):
-            compile_pyc = compile_pyc.lower() in ['true', '1', 'yes']
-        inject_init = value.get("inject_init", True)  # FIXME
-    else:
-        inject_ext_modules = True
-        remove_source = True
-        compile_pyc = True
-        inject_init = True
+        _conf = {**_conf, **value}
 
-    _compile_pyc[0] = compile_pyc
-
-    compiled_module = cythonize(_compile_packages(dist.packages),
-                                compiler_directives={'language_level': 3},
-                                build_dir="build/cythonpackage"
-                                )
-    if dist.ext_modules:
-        dist.ext_modules.extend(compiled_module)
-    else:
-        dist.ext_modules = compiled_module
+    if _conf["inject_ext_modules"]:
+        compiled_module = cythonize(_compile_packages(dist.packages),
+                                    compiler_directives={'language_level': 3},
+                                    build_dir="build/cythonpackage"
+                                    )
+        if dist.ext_modules:
+            dist.ext_modules.extend(compiled_module)
+        else:
+            dist.ext_modules = compiled_module
 
     # Extend the build process to remove the compiled source code
     dist.cmdclass['build_py'] = _build_py
+    if dist.install_requires:
+        dist.install_requires.extend('cythonpackage')
+    else:
+        dist.install_requires = ['cythonpackage']
 
 
 def init(module_name: str) -> None:

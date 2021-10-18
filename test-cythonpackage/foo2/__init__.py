@@ -1,2 +1,1 @@
-import cythonpackage
-cythonpackage.init(__name__)
+print("__Init__ from foo2")

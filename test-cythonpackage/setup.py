@@ -36,11 +36,12 @@ setup(
     setup_requires=['cythonpackage'],
     cythonpackage={
         "inject_ext_modules": True,
+        "inject_init": True,
         "remove_source": True,
         "compile_pyc": True,
-        "inject_init": True,
+        "optimize": 2,
     },
 
     packages=find_packages(),
-    install_requires=['cythonpackage'],
+    # install_requires=['cythonpackage'],
 )
