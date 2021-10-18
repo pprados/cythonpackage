@@ -24,7 +24,7 @@ from setuptools.command.build_py import build_py as original_build_py
 
 
 def _compile_package(package_path: Union[str, Path]) -> List[Extension]:
-    package_path = str(package_path).replace('.', '/')
+    package_path = str(package_path).replace('.', '/')  # FIXME
     sourcefiles = [str(path) for path in Path(package_path).rglob('*.pyx')]
     sourcefiles += [str(path) for path in Path(package_path).rglob('*.py')
                     if path.name not in ["__init__.py", "__compile__.py"]]
@@ -60,8 +60,15 @@ class _CythonPackageMetaPathFinder(importlib.abc.MetaPathFinder):
             return importlib.machinery.ExtensionFileLoader(fullname, self._file)
 
 
+_compile_pyc = [False]
+_optimize = 2
 class _build_py(original_build_py):
     """ build_py to remove the source file for compiled package """
+
+    def finalize_options(self):
+        super().finalize_options()
+        self.compile=_compile_pyc[0]
+        self.optimize=_optimize
 
     def find_package_modules(self, package: str, package_dir: str) -> List[Tuple[str, str, str]]:
         modules: List[Tuple[str, str, str]] = super().find_package_modules(package, package_dir)
@@ -89,10 +96,31 @@ class _build_py(original_build_py):
         return filtered_datas
 
 
+# TODO: injection auto dans __init__
+# Parametrage fin pour désactiver
+# Article presse FR
+# Article US
+# Installation locale avec build_ext
+# Verifier ok avec les sources en whl
+# Cache des prefix à tester et supprimer les suffixes
+# voir la gesion multi os https://github.com/pypa/cibuildwheel
 def cythonpackage(dist, attr, value):
     """ Plugin for setuptools """
     if not value:
         return
+    if isinstance(value, dict):
+        inject_ext_modules = value.get("inject_ext_modules", True)
+        remove_source = value.get("remove_source", True)
+        compile_pyc = value.get("compile_pyc", "true").lower() in ['true', '1', 'yes']
+        inject_init = value.get("inject_init", True)  # FIXME
+    else:
+        inject_ext_modules = True
+        remove_source = True
+        compile_pyc = True
+        inject_init = True
+
+    _compile_pyc[0] = compile_pyc
+
     compiled_module = cythonize(_compile_packages(dist.packages),
                                 compiler_directives={'language_level': 3},
                                 build_dir="build/cythonpackage"

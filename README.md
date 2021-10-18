@@ -68,3 +68,6 @@ setup(
     cythonpackage=True,
 )
 ```
+
+
+TODO: https://python-poetry.org/
