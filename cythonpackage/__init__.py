@@ -13,6 +13,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
+import codecs
 import importlib
 import sys
 from pathlib import Path
@@ -128,7 +129,7 @@ class _build_py(original_build_py):
                         lines.append(inject)
                         update = True
                     if update:
-                        with open(outfile, "w") as f:
+                        with codecs.open("test_output", "w", "utf-8-sig") as f:
                             f.writelines(lines)
         return outfile, copied
 

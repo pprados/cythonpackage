@@ -11,6 +11,14 @@ REQUIREMENTS=
 TWINE_USERNAME?=__token__
 SIGN_IDENTITY?=$(USER)
 
+CHECK_VENV=if [[ $(VIRTUAL_ENV) == "" ]] ; \
+  then ( echo -e "$(green)Use: $(cyan)virtualenv$(VENV)$(green) before using $(cyan)make$(normal)"; exit 1 ) ; fi
+
+ACTIVATE_VENV=source $(VIRTUAL_ENV)/bin/activate
+DEACTIVATE_VENV=deactivate
+
+VALIDATE_VENV?=$(CHECK_VENV)
+
 ## Print all majors target
 help:
 	@echo "$(bold)Available rules:$(normal)"
@@ -71,6 +79,7 @@ test: bdist
 	python setup.py bdist_wheel
 	pip install --force-reinstall dist/*.whl
 	cd ..
+test-run:
 	python -c 'import foo.bar_a; foo.bar_a.print_me()'
 	python -c 'import foo.bar_b; foo.bar_b.print_me()'
 	python -c 'import foo.sub.sub; foo.sub.sub.print_me()'
