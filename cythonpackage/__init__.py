@@ -129,7 +129,7 @@ class _build_py(original_build_py):
                         lines.append(inject)
                         update = True
                     if update:
-                        with codecs.open("test_output", "w", "utf-8-sig") as f:
+                        with codecs.open(outfile, "w", "utf-8-sig") as f:
                             f.writelines(lines)
         return outfile, copied
 

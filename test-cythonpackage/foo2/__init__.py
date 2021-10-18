@@ -1,1 +1,0 @@
-print("__Init__ from foo2")
