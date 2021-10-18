@@ -62,13 +62,15 @@ class _CythonPackageMetaPathFinder(importlib.abc.MetaPathFinder):
 
 _compile_pyc = [False]
 _optimize = 2
+
+
 class _build_py(original_build_py):
     """ build_py to remove the source file for compiled package """
 
     def finalize_options(self):
         super().finalize_options()
-        self.compile=_compile_pyc[0]
-        self.optimize=_optimize
+        self.compile = _compile_pyc[0]
+        self.optimize = _optimize
 
     def find_package_modules(self, package: str, package_dir: str) -> List[Tuple[str, str, str]]:
         modules: List[Tuple[str, str, str]] = super().find_package_modules(package, package_dir)
@@ -111,7 +113,9 @@ def cythonpackage(dist, attr, value):
     if isinstance(value, dict):
         inject_ext_modules = value.get("inject_ext_modules", True)
         remove_source = value.get("remove_source", True)
-        compile_pyc = value.get("compile_pyc", "true").lower() in ['true', '1', 'yes']
+        compile_pyc = value.get("compile_pyc", "true")
+        if isinstance(compile_pyc, str):
+            compile_pyc = compile_pyc.lower() in ['true', '1', 'yes']
         inject_init = value.get("inject_init", True)  # FIXME
     else:
         inject_ext_modules = True

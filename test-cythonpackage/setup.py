@@ -8,10 +8,8 @@
 # )
 
 # Version sans PBR
-from Cython.Build import cythonize
-from setuptools import Extension
 from setuptools import setup, find_packages
-import cythonpackage
+
 setup(
     # ext_modules=cythonize(
     #     [
@@ -36,7 +34,12 @@ setup(
     # ),
     # cmdclass={"build_py":cythonpackage._build_py},
     setup_requires=['cythonpackage'],
-    cythonpackage=True,
+    cythonpackage={
+        "inject_ext_modules": True,
+        "remove_source": True,
+        "compile_pyc": True,
+        "inject_init": True,
+    },
 
     packages=find_packages(),
     install_requires=['cythonpackage'],
