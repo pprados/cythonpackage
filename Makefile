@@ -79,7 +79,7 @@ test: bdist
 	python setup.py bdist_wheel
 	pip install --force-reinstall dist/*.whl
 	cd ..
-test-run:
+
 	python -c 'import foo.bar_a; foo.bar_a.print_me()'
 	python -c 'import foo.bar_b; foo.bar_b.print_me()'
 	python -c 'import foo.sub.sub; foo.sub.sub.print_me()'
@@ -90,12 +90,12 @@ test-run:
 
 # --------------------------- Distribution
 dist/:
-	mkdir dist
+	@mkdir -p dist
 
 .PHONY: bdist
 dist/$(subst -,_,$(PRJ_PACKAGE))-*.whl: $(REQUIREMENTS) $(PYTHON_SRC) | dist/
 	@$(VALIDATE_VENV)
-	export PBR_VERSION=$$(git describe --tags)
+	export PBR_VERSION=$$(git describe --tags 2>/dev/null | echo "0.0.0.0")
 	$(PYTHON) setup.py bdist_wheel
 
 ## Create a binary wheel distribution

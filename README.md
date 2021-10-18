@@ -47,20 +47,26 @@ and replaced with a shared library. All others `.py` were pre-compiled.
 
 In another virtualenv, try to install this wheel.
 ```python
+$ mkdir -p tmp
+$ cd tmp
 $ virtualenv test
 $ source test/bin/activate
-$ pip install dist/*.whl
+$ pip install ../dist/*.whl
 $ python ...  # use your package
 ```
-We use another virtualenv to remove the confusion between your python source code
+We use another virtualenv to remove the confusion between your local python source code
 and the compiled version. Sometime, you use the *interpreted* version
-it the source code is accessible with the `PYTHONPATH`.
+if the source code are accessible with the `PYTHONPATH`.
 
 ## Multiple architecture
 The wheel file is specific for an architecture and a Python version. 
-You must build de wheel for each architecture. 
+You must build wheels for all architecture. 
 Try [cibuildwheel](https://cibuildwheel.readthedocs.io/en/stable/)
-to generate a version of each Operating System.
+to generate a version of each Operating System and python versions.
+```shell
+$ pip install cibuildwheel
+$ python3 -m cibuildwheel --output-dir dist
+```
 
 ## PBR
 [PBR](https://docs.openstack.org/pbr/latest/) is a library for managing 
@@ -77,10 +83,13 @@ setup(
 )
 ```
 
+# Sample
+The project [test-cythonpackage](https://github.com/pprados/test-cythonpackage) propose a tiny exemple
+to use CythonPackage, and generate all binary version, with GitHub Action.
 
 # Advanced usage
-To make this magie, we manipulate some parameters. You can remove some manipulation with a dict 
-in `cythonpackage` parameter.
+To make this magic, we manipulate some special parameters at different levels. 
+You can remove some manipulation with a dictionary in `cythonpackage` parameter.
 ```python
 from setuptools import setup, find_packages
 
@@ -104,7 +113,7 @@ the module `__compile__` with all the source code. But with this, it's important
 `sys.meta_path` to use only one shared library.
 It's done in the `__init__.py`
 
-If you set this parameter to False, you must write yourself the `ext_modules` parameter
+If you set this parameter to `False`, you must write yourself the `ext_modules` parameter
 ```python
 setup(...
       ext_modules=cythonize(
@@ -122,19 +131,21 @@ on the fly, to inject two line:
 import cythonpackage
 cythonpackage.init(__name__)
 ```
+If this manipulation break something, set this parameter to `False` and add yourself these two lines.
 
 ## remove_source
 Because the shared library is enough to use the package, the source code is not necessary. And, sometime, it's possible
 to have a confusion between the *compiled* version and the *interpreted* version. To be sure to use the *compiled*
 version, we remove all the source code of the compiled files.
 
-If you set this parameter to False, the source code were in the whell.
+If you set this parameter to `False`, the source code were inside the whell.
 
 ## compile_pyc / optimize
 The objectif of this kind of build, it to optimize the usage of the package. Normally, it's possible to compile
 the source code with `python setup.py build_py --compile`. 
-But the `bdist_wheel`can not receive the `--compile` parameter.
-With CythonPackage, by default, the `compile` is set to True, and the `optimize` is set to `2`
+But the `bdist_wheel` can not receive the `--compile` parameter.
+
+With CythonPackage, by default, the `compile` is set to `True`, and the `optimize` is set to `2`
 
 You can change these parameters.
 
