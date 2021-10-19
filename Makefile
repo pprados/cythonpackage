@@ -11,13 +11,26 @@ REQUIREMENTS=
 TWINE_USERNAME?=__token__
 SIGN_IDENTITY?=$(USER)
 
-CHECK_VENV=if [[ $(VIRTUAL_ENV) == "" ]] ; \
-  then ( echo -e "$(green)Use: $(cyan)virtualenv$(VENV)$(green) before using $(cyan)make$(normal)"; exit 1 ) ; fi
+CHECK_VENV=[[ "$(VIRTUAL_ENV)" == "" ]] && \
+  ( echo -e "$(green)Use: $(cyan)virtualenv .venv$(VENV)$(green) before using $(cyan)make$(normal)"; exit 1 )
 
 ACTIVATE_VENV=source $(VIRTUAL_ENV)/bin/activate
 DEACTIVATE_VENV=deactivate
 
 VALIDATE_VENV?=$(CHECK_VENV)
+
+ifneq ($(TERM),)
+normal:=$(shell tput sgr0)
+bold:=$(shell tput bold)
+red:=$(shell tput setaf 1)
+green:=$(shell tput setaf 2)
+yellow:=$(shell tput setaf 3)
+blue:=$(shell tput setaf 4)
+purple:=$(shell tput setaf 5)
+cyan:=$(shell tput setaf 6)
+white:=$(shell tput setaf 7)
+gray:=$(shell tput setaf 8)
+endif
 
 ## Print all majors target
 help:
@@ -87,7 +100,14 @@ test: bdist
 	python -c 'import foo2.bar_d; foo2.bar_d.print_me()'
 	python -c 'import foo3.bar_e; foo3.bar_e.print_me()' | true
 
-
+# Publish the distribution in a local PIP repository
+local-repository: bdist
+	@pip install pypiserver || true
+	mkdir -p .repository/$(PRJ)
+	( cd .repository/$(PRJ) ; ln -fs ../../dist/*.whl . )
+	echo -e "$(green)export PIP_EXTRA_INDEX_URL=http://localhost:8888/simple$(normal)"
+	echo -e "or use $(green)pip install --index-url http://localhost:8888/simple/$(normal)"
+	pypi-server -p 8888 .repository/
 # --------------------------- Distribution
 dist/:
 	@mkdir -p dist
@@ -95,8 +115,9 @@ dist/:
 .PHONY: bdist
 dist/$(subst -,_,$(PRJ_PACKAGE))-*.whl: $(REQUIREMENTS) $(PYTHON_SRC) | dist/
 	@$(VALIDATE_VENV)
-	export PBR_VERSION=$$(git describe --tags 2>/dev/null | echo "0.0.0.0")
-	$(PYTHON) setup.py bdist_wheel
+	export PBR_VERSION=$$(git describe --tags 2>/dev/null | echo "0.0.0")
+	# Pre-pep517 $(PYTHON) setup.py bdist_wheel
+	pip wheel --no-deps -w dist .
 
 ## Create a binary wheel distribution
 bdist: dist/$(subst -,_,$(PRJ_PACKAGE))-*.whl | dist/
@@ -111,7 +132,7 @@ sdist: dist/$(PRJ_PACKAGE)-*.tar.gz | dist/
 .PHONY: clean-dist dist
 
 clean-dist:
-	rm -Rf dist/*
+	rm -Rf dist/* .repository
 
 # see https://packaging.python.org/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
 ## Create a full distribution

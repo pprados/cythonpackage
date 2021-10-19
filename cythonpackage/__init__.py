@@ -13,11 +13,12 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
-import codecs
 import importlib
+import io
+import os
 import sys
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any, Union
 
 from Cython.Build import cythonize
 from setuptools import Extension
@@ -84,6 +85,7 @@ class _build_py(original_build_py):
                 if (_path.suffix in [".py", ".pyx"] and
                         "__init__.py" != _path.name and
                         Path(_path.parent, "__compile__.py").exists()):
+                    print(f'find_package_modules {filepath=} FILTRE')
                     continue
                 filtered_modules.append((pkg, mod, filepath,))
             return filtered_modules
@@ -101,6 +103,7 @@ class _build_py(original_build_py):
                 if (_path.suffix in [".c", ".py", ".pyx"] and
                         # "__init__.py" != _path.name and
                         Path(_path.parent, "__compile__.py").exists()):
+                    print(f'find_data_files {f=} FILTRE')
                     continue
                 filtered_datas.append(f)
             return filtered_datas
@@ -109,15 +112,15 @@ class _build_py(original_build_py):
 
     def build_module(self, module, module_file, package):
         outfile, copied = super().build_module(module, module_file, package)
-        inject="import cythonpackage; cythonpackage.init(__name__);"
+        inject = "import cythonpackage; cythonpackage.init(__name__);"
         if self.inject_init:
             if outfile.endswith("__init__.py"):
                 package_file = package.replace('.', '/')
                 if outfile.endswith("__init__.py") and Path(package_file, "__compile__.py").exists():
                     # Patch the __init__.py inject the initialisation
-                    with open(outfile) as f:
+                    with io.open(outfile, encoding="utf-8-sig") as f:
                         lines = f.readlines()
-                    update= False
+                    update = False
                     for i, line in enumerate(lines):
                         if line.strip().startswith("#"):
                             continue
@@ -129,7 +132,7 @@ class _build_py(original_build_py):
                         lines.append(inject)
                         update = True
                     if update:
-                        with codecs.open(outfile, "w", "utf-8-sig") as f:
+                        with io.open(outfile, "w", encoding="utf-8-sig") as f:
                             f.writelines(lines)
         return outfile, copied
 
@@ -142,33 +145,54 @@ class _build_py(original_build_py):
 # Verifier ok avec les sources en whl
 # Cache des prefix à tester et supprimer les suffixes
 # voir la gesion multi os https://github.com/pypa/cibuildwheel
-def cythonpackage(dist, attr, value):
+def build_cythonpackage(setup: Dict[str, Any], conf: Union[bool, Dict[str, Any]] = True):
     """ Plugin for setuptools """
     global _conf
-    if not value:
+    if not conf:
         return
-    if isinstance(value, dict):
-        _conf = {**_conf, **value}
+    if isinstance(conf, dict):
+        _conf = {**_conf, **conf}
 
     if _conf["inject_ext_modules"]:
-        compiled_module = cythonize(_compile_packages(dist.packages),
+        packages = setup.get('packages', [])
+        ext_modules = setup.get('ext_modules', [])
+        compiled_module = cythonize(_compile_packages(packages),
                                     compiler_directives={'language_level': 3},
                                     build_dir="build/cythonpackage"
                                     )
-        if dist.ext_modules:
-            dist.ext_modules.extend(compiled_module)
+        if ext_modules:
+            ext_modules.extend(compiled_module)
         else:
-            dist.ext_modules = compiled_module
+            setup['ext_modules'] = compiled_module
 
     # Extend the build process to remove the compiled source code
-    dist.cmdclass['build_py'] = _build_py
-    if dist.install_requires:
-        dist.install_requires.extend('cythonpackage')
-    else:
-        dist.install_requires = ['cythonpackage']
+    cmdclass = setup.get('cmdclass', {})
+    cmdclass['build_py'] = _build_py
+    setup['cmdclass'] = cmdclass
+
+    install_requires = setup.get('install_requires', [])
+    if install_requires is None:
+        install_requires = []
+    if 'cythonpackage' not in install_requires:
+        install_requires.append('cythonpackage')
+        setup['install_requires'] = install_requires
+
+    if 'CFLAGS' not in os.environ:
+        os.environ['CFLAGS'] = '-O3'
+
+
+# Plugin for setup.py
+def cythonpackage(setup, attr, value: Union[bool, Dict[str, Any]]):
+    build_cythonpackage(vars(setup), value)
+
+
+# Plugin for poetry
+def build(setup_kwargs: Dict[str, Any]):  # TODO: parameters
+    build_cythonpackage(True, setup_kwargs)
 
 
 def init(module_name: str) -> None:
     """ Load the compiled module, and invoke the PyInit-function of another module """
     module = importlib.import_module(module_name + '.__compile__')
+    # FIXME: add only one time for each branch
     sys.meta_path.append(_CythonPackageMetaPathFinder(module.__name__.split('.', 1)[0] + ".", module.__file__))

@@ -83,6 +83,45 @@ setup(
 )
 ```
 
+## PEP517 - Poetry-core
+Poetry propose a new approach to build a *wheel*, compatible with PEP 517.
+At this time, the last version (1.1.*) is not compatible with *cython*
+and it's not possible to add a plugin.
+
+Create a `pyproject.toml` file with something like this:
+```toml
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0", "cythonpackage"]
+
+[tool.poetry]
+name = "test"
+version = "0.0.0"
+description = "Test"
+authors = ["Me <me@me.org>"]
+packages = [
+    { include = "foo" },
+    { include = "foo2" },
+    { include = "foo3" },
+]
+# Remove source code
+exclude = ["**/*.py"]
+build = 'build.py'
+
+[tool.poetry.dependencies]
+python = "^3.7"
+cythonpackage = "*"
+
+[build-system]
+requires = ["poetry-core>=1.2.0a2"] # 1.2.0a2
+build-backend = "poetry.core.masonry.api"
+```
+and a file `build.py` like this:
+```python
+from cythonpackage import build_cythonpackage
+def build(setup_kwargs):
+    build_cythonpackage(True,setup_kwargs)
+```
 # Sample
 The project [test-cythonpackage](https://github.com/pprados/test-cythonpackage) propose a tiny exemple
 to use CythonPackage, and generate all binary version, with GitHub Action.
@@ -117,10 +156,15 @@ If you set this parameter to `False`, you must write yourself the `ext_modules` 
 ```python
 setup(...
       ext_modules=cythonize(
-        Extension(
+        [
+            Extension(
                     name=f"foo.__compile__",
-                    sources=["foo/bar_a.py","foo/bar_b.py"],
-                ))
+                    sources=['foo/__compile__.py', 'foo/bar_a.py', 'foo/bar_b.py']
+                )
+        ],
+        build_dir="build/cythonpackage",
+        compiler_directives={'language_level': 3}
+      )
 )
 ```
 
@@ -151,4 +195,4 @@ You can change these parameters.
 
 
 # TODO:
-Check with TODO: https://python-poetry.org/
+- Add poetry 1.2 plugin when possible
