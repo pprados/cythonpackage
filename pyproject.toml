@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "cythonpackage"
-version = "0.0.0"  # Be calculate
+version = "0.0.0"
 description = "Compile a package in one .so file and remove source code"
 authors = ["Philippe Prados <github@prados.fr>"]
 license = "Apache-2.0"
@@ -13,7 +13,7 @@ readme = "README.md"
 homepage = "https://github.com/pprados/cythonpackage"
 repository = "https://github.com/pprados/cythonpackage/"
 documentation = "https://github.com/pprados/cythonpackage/"
-keywords = ["cython"]
+keywords = ["cython", "setuptools", "poetry", "plugin"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -33,9 +33,12 @@ include = ["ChangeLog","AUTHORS"]
 python = "^3.7"
 cython = "^0.29.24"
 setuptools = { version = ">58.0.0", optional = true }
+poetry-core = { version=">=1.0.0", optional = true }
+
 
 [tool.poetry.extras]
 build = ["setuptools"]
+poetry = ["poetry-core","setuptools"]
 
 [tool.poetry.dev-dependencies]
 cibuildwheel = "~2"
