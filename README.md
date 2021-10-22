@@ -38,6 +38,7 @@ cythonpackage=True
 ```
 Now, you can build your *compiled* wheel.
 ```shell
+python3 -m pip install --upgrade build
 python -m build
 ```
 You can check inside the `dist/*.whl` to see if the source code in `__compile__` package are removed 
@@ -185,16 +186,18 @@ python -m build
 
 | Command | python -m build | pip wheel --no-deps -w dist . | python setup.py bdist_wheel | 
 | ------- | --------------- | ----------------------------- | --------------------------- |
-| setup.py                                                                 | OK | KO | KO |
+| setup.py                                                                 | OK | KO | OK |
 | setup.py<br />setup.cfg                                                  | KO | KO | KO |
 | setup.cfg                                                                | KO | KO | KO |
+
 | pyproject.toml[poetry]                                                   | OK | OK | KO |
+| pyproject.toml[poetry]<br />setup.cfg                                    | OK | OK | KO |
+| pyproject.toml[poetry]<br />setup.cfg<br />setup.py[cythonpackage]       | OK | OK | KO |
+| pyproject.toml[poetry]<br />setup.cfg<br />setup.py[pbr,cythonpackage]   | OK | KO | KO |
+
 | pyproject.toml[setuptools]                                               | KO | KO | KO |
-| setup.cfg<br />pyproject.toml[poetry]                                    | OK | OK | KO |
-| setup.cfg<br />pyproject.toml[setuptools]                                | KO | KO | KO |
-| setup.py[cythonpackage]<br />setup.cfg<br />pyproject.toml[poetry]       | OK | OK | KO |
-| setup.py[cythonpackage]<br />setup.cfg<br />pyproject.toml[setuptools]   | KO | KO | KO |
-| setup.py[pbr,cythonpackage]<br />setup.cfg<br />pyproject.toml[poetry]   | KO | KO | KO |
+| pyproject.toml[setuptools]<br />setup.cfg                                | KO | KO | KO |
+| pyproject.toml[setuptools]<br />setup.cfg<br />setup.py[cythonpackage]   | KO | KO | KO |
 
 # Sample
 The project [test-cythonpackage](https://github.com/pprados/test-cythonpackage) propose a tiny exemple
