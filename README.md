@@ -1,7 +1,9 @@
-When we build a wheel, compile automatically pythons package in one shared library and remove the source code. 
+> Compile automatically pythons package in one shared library and remove the source code
+when we build a distribution.
 
 # Introduction
-Sometime, you want to publish your module, but not the source code.
+Sometime, you want to publish an optimized version of your module.
+Sometime, you don't want to publish the source code.
 You can use [PyArmor](https://pyarmor.readthedocs.io/en/latest/), 
 but if you want to keep the API, it's not a good approach.
 
@@ -11,7 +13,8 @@ Cython is complex for the *normal* python developer.
 Now, you must use : edit, **package**, test, edit, **package**, test.
 - Cython propose to create a shared library for each *module*. If in you package, you have ten python file, you will
 have ten shared library.
-- The wheel package merge the python source code and the shared library
+- The wheel package merge the python source code and the shared library. 
+It's big and not confidential.
 
 We can do better.
 
@@ -22,17 +25,69 @@ and generate a single shared library when you create the wheel.
 And, it's VERY SIMPLE to use !
 
 # Usage
-For each package, who you want to compile and/or hide the source code, add a file `__compile__.py` with nothing.
+For each package who you want to compile and/or hide the source code, add a file `__compile__.py` with nothing.
 With that, you can continue to use your classical python file or add some `.pyx` files.
 For the developer point of vue, you continue to use the *interpreted* python code.
 
-Then, in the `setup.py`, add `setup_requires` and `cythonpackage=True`:
+In the `setup.cfg`, add `setup_requires` and `cythonpackage=True`:
+```
+[metadata]
+name = my_compiled_project
+setup_requires=cythonpackage
+cythonpackage=True
+```
+Now, you can build your *compiled* wheel.
+```shell
+python -m build
+```
+You can check inside the `dist/*.whl` to see if the source code in `__compile__` package are removed 
+and replaced with a shared library. All others `.py` were pre-compiled.
+
+In another virtualenv **and directory**, try to install this wheel.
+```python
+$ mkdir -p tmp
+$ cd tmp
+$ virtualenv test
+$ source test/bin/activate
+$ pip install ../dist/*.whl
+$ python ...  # use your package
+```
+We use another virtualenv and another directory to remove the confusion between your local python source code
+and the compiled version. Sometime, you use the *interpreted* version
+if the source code are accessible with the `PYTHONPATH`.
+
+You can check the running context with:
+```python
+if cython.compiled:
+    print("Use compiled version")
+else:
+    print("Use slow interpreted version")
+```
+
+Use can try the sample present [here](https://github.com/pprados/test-cythonpackage): https://github.com/pprados/test-cythonpackage
+Try to rename the `pyproject.toml` or `setup_obsolete.py` to test different kind of builds.
+
+## Multiple architecture
+TODO: a valider
+The wheel file generated is specific for an architecture and a Python version. 
+The name describe that : test_cythonpackage-0.0.0-cp38-cp38-manylinux_2_31_x86_64.whl
+To be compatible with multiple combinaison of python version or architecture, 
+you must build wheels for all architecture. 
+Try [cibuildwheel](https://cibuildwheel.readthedocs.io/en/stable/)
+to generate a version of each Operating System and python versions.
+```shell
+$ pip install cibuildwheel
+$ python3 -m cibuildwheel --output-dir dist --platform linux
+```
+
+## Using setup.py ([obsolete](https://setuptools.pypa.io/en/latest/userguide/declarative_config.html))
+In the `setup.py`, add `setup_requires` and `cythonpackage=True`:
 
 ```python
 from setuptools import setup, find_packages
 
 setup(
-    setup_requires=['cythonpackage'],
+    setup_requires=['cythonpackage[build]'],
     cythonpackage=True,
     packages=find_packages(),
     requires=['cythonpackage'],
@@ -42,39 +97,26 @@ Now, you can build your *compiled* wheel.
 ```shell
 python setup.py bdist_wheel
 ```
-You can check inside the `dist/*.whl` to see if the source code in `__compile__` package are removed 
-and replaced with a shared library. All others `.py` were pre-compiled.
-
-In another virtualenv, try to install this wheel.
-```python
-$ mkdir -p tmp
-$ cd tmp
-$ virtualenv test
-$ source test/bin/activate
-$ pip install ../dist/*.whl
-$ python ...  # use your package
-```
-We use another virtualenv to remove the confusion between your local python source code
-and the compiled version. Sometime, you use the *interpreted* version
-if the source code are accessible with the `PYTHONPATH`.
-
-## Multiple architecture
-The wheel file is specific for an architecture and a Python version. 
-You must build wheels for all architecture. 
-Try [cibuildwheel](https://cibuildwheel.readthedocs.io/en/stable/)
-to generate a version of each Operating System and python versions.
+or
 ```shell
-$ pip install cibuildwheel
-$ python3 -m cibuildwheel --output-dir dist
+python -m build
 ```
 
-## PBR
+## Using PBR ([obsolete](https://setuptools.pypa.io/en/latest/userguide/declarative_config.html))
 [PBR](https://docs.openstack.org/pbr/latest/) is a library for managing 
 setuptools packaging needs in a consistent manner.
 
-You can use use PBR with CythonPackage:
+You can use use PBR with CythonPackage in `setup.cfg`:
+```
+[metadata]
+name = my_compiled_project
+setup_requires=cythonpackage,pbr
+cythonpackage=True
+pbr=True
+```
+or `setup.py`
 ```python
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     setup_requires=['pbr','cythonpackage'],
@@ -83,16 +125,28 @@ setup(
 )
 ```
 
-## PEP517 - Poetry-core
+## Using standard PEP-517
+At this time, the usage of standard PEP-517 is not working.
+
+```
+; pyproject.toml NOT WORKING
+[build-system]
+requires = [ "setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+```
+The files were not compiled.
+
+## Using Poetry
 Poetry propose a new approach to build a *wheel*, compatible with PEP 517.
 At this time, the last version (1.1.*) is not compatible with *cython*
-and it's not possible to add a plugin.
+and it's not possible to add a plugin with enough features, 
+but you can use it in a more complex approach:
 
 Create a `pyproject.toml` file with something like this:
 ```toml
 [build-system]
 build-backend = "poetry.core.masonry.api"
-requires = ["poetry-core>=1.0.0", "cythonpackage"]
+requires = ["cythonpackage[poetry]"]
 
 [tool.poetry]
 name = "test"
@@ -105,23 +159,43 @@ packages = [
     { include = "foo3" },
 ]
 # Remove source code
-exclude = ["**/*.py"]
-build = 'build.py'
+exclude = ["**/[!__]*.py"]
+build = 'poetry_build.py'
 
 [tool.poetry.dependencies]
 python = "^3.7"
 cythonpackage = "*"
 
 [build-system]
-requires = ["poetry-core>=1.2.0a2"] # 1.2.0a2
+requires = ["poetry-core>=1.2.0a2"]
 build-backend = "poetry.core.masonry.api"
 ```
-and a file `build.py` like this:
+and a file `./poetry_build.py` like this:
 ```python
-from cythonpackage import build_cythonpackage
-def build(setup_kwargs):
-    build_cythonpackage(True,setup_kwargs)
+import cythonpackage
+def build(setup_kw):
+    cythonpackage.build_cythonpackage(setup_kw)
 ```
+Then, you can build the package with:
+```shell
+python -m build
+```
+
+## Synthesis
+
+| Command | python -m build | pip wheel --no-deps -w dist . | python setup.py bdist_wheel | 
+| ------- | --------------- | ----------------------------- | --------------------------- |
+| setup.py                                                                 | OK | KO | KO |
+| setup.py<br />setup.cfg                                                  | KO | KO | KO |
+| setup.cfg                                                                | KO | KO | KO |
+| pyproject.toml[poetry]                                                   | OK | OK | KO |
+| pyproject.toml[setuptools]                                               | KO | KO | KO |
+| setup.cfg<br />pyproject.toml[poetry]                                    | OK | OK | KO |
+| setup.cfg<br />pyproject.toml[setuptools]                                | KO | KO | KO |
+| setup.py[cythonpackage]<br />setup.cfg<br />pyproject.toml[poetry]       | OK | OK | KO |
+| setup.py[cythonpackage]<br />setup.cfg<br />pyproject.toml[setuptools]   | KO | KO | KO |
+| setup.py[pbr,cythonpackage]<br />setup.cfg<br />pyproject.toml[poetry]   | KO | KO | KO |
+
 # Sample
 The project [test-cythonpackage](https://github.com/pprados/test-cythonpackage) propose a tiny exemple
 to use CythonPackage, and generate all binary version, with GitHub Action.
@@ -196,3 +270,73 @@ You can change these parameters.
 
 # TODO:
 - Add poetry 1.2 plugin when possible
+
+# Test de build
+** Avec setup.py, setup.cfg, pyproject.toml[poetry]
+
+$ pip wheel --no-deps --use-pep517 -w dist .
+=> Correct, nom=cythonpackage-0.0.0.post10.dev0+6f71892-py3-none-any
+
+$ pip wheel --no-deps --no-use-pep517 -w dist .
+=> ERROR: Disabling PEP 517 processing is invalid: project specifies a build backend of poetry.core.masonry.api in pyproject.toml
+
+$ python -m build
+=> Correct (isolé lors du build)
+
+
+
+** Avec setup.py, setup.cfg, pyproject.toml[setuptools]
+$ pip wheel --no-deps --use-pep517 -w dist .
+=> Correct
+
+$ pip wheel --no-deps --no-use-pep517 -w dist .
+=> ERROR: Disabling PEP 517 processing is invalid: project specifies a build backend of poetry.core.masonry.api in pyproject.toml
+
+$ python setup.py bdist_wheel
+=> Correct
+
+$ python -m build
+=> Correct (isolé lors du build)
+
+
+** Avec setup.py[PBR=False], setup.cfg, SANS pyproject.toml
+$ pip wheel --no-deps --use-pep517 -w dist .
+=> Correct
+
+$ pip wheel --no-deps --no-use-pep517 -w dist .
+=> Correct
+
+$ python setup.py bdist_wheel
+=> Correct
+
+$ python -m build
+=> Correct (isolé lors du build)
+
+
+** Avec setup.py[PBR=True], setup.cfg, SANS pyproject.toml
+$ pip wheel --no-deps --use-pep517 -w dist .
+=> Correct
+
+$ pip wheel --no-deps --no-use-pep517 -w dist .
+=> Correct
+
+$ python setup.py bdist_wheel
+=> Correct
+
+$ python -m build
+=> Correct (isolé lors du build)
+
+
+** Avec setup.py[NO], setup.cfg, SANS pyproject.toml
+$ pip wheel --no-deps --use-pep517 -w dist .
+=> Correct
+
+$ pip wheel --no-deps --no-use-pep517 -w dist .
+=> Correct
+
+$ python setup.py bdist_wheel
+=> Correct
+
+$ python -m build
+=> Correct (isolé lors du build)
+

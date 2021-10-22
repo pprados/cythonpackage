@@ -84,6 +84,7 @@ clean:
 
 ## Test the usage of cythonpackage
 test: bdist
+# TODO: test differente kind of build/package
 	export PIP_EXTRA_INDEX_URL=https://pypi.org/simple
 	export PIP_INDEX_URL=https://test.pypi.org/simple
 	#pip install -e .
@@ -116,8 +117,9 @@ dist/:
 dist/$(subst -,_,$(PRJ_PACKAGE))-*.whl: $(REQUIREMENTS) $(PYTHON_SRC) | dist/
 	@$(VALIDATE_VENV)
 	export PBR_VERSION=$$(git describe --tags 2>/dev/null | echo "0.0.0")
-	# Pre-pep517 $(PYTHON) setup.py bdist_wheel
+	# $(PYTHON) setup.py bdist_wheel
 	pip wheel --no-deps -w dist .
+	# python -m build
 
 ## Create a binary wheel distribution
 bdist: dist/$(subst -,_,$(PRJ_PACKAGE))-*.whl | dist/
