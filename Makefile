@@ -179,7 +179,7 @@ keyring:
 .PHONY: push-docker-release push-release release
 
 ## Publish a distribution on pypi.org
-release: clean .make-validate check-twine
+release: clean check-twine
 	@$(VALIDATE_VENV)
 	[[ $$( find dist/ -name "*.dev*" | wc -l ) == 0 ]] || \
 		( echo -e "$(red)Add a tag version in GIT before release$(normal)" \
