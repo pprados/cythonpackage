@@ -87,7 +87,7 @@ test: bdist
 # TODO: test differente kind of build/package
 	export PIP_EXTRA_INDEX_URL=https://pypi.org/simple
 	export PIP_INDEX_URL=https://test.pypi.org/simple
-	#pip install -e .
+	pip install -e .
 	cd test-cythonpackage
 	rm -Rf build dist
 	python setup.py bdist_wheel
@@ -99,12 +99,12 @@ test: bdist
 	python -c 'import foo.sub.sub; foo.sub.sub.print_me()'
 	python -c 'import foo2.bar_c; foo2.bar_c.print_me()'
 	python -c 'import foo2.bar_d; foo2.bar_d.print_me()'
-	python -c 'import foo3.bar_e; foo3.bar_e.print_me()' | true
+	python -c 'import foo3.bar_e; foo3.bar_e.print_me()' || true
 
 # Publish the distribution in a local PIP repository
-local-repository: bdist
-	@pip install pypiserver || true
-	mkdir -p .repository/$(PRJ)
+local-repository:
+	@mkdir -p .repository/$(PRJ)
+	rm -f .repository/$(PRJ)/*
 	( cd .repository/$(PRJ) ; ln -fs ../../dist/*.whl . )
 	echo -e "$(green)export PIP_EXTRA_INDEX_URL=http://localhost:8888/simple$(normal)"
 	echo -e "or use $(green)pip install --index-url http://localhost:8888/simple/$(normal)"
@@ -116,10 +116,12 @@ dist/:
 .PHONY: bdist
 dist/$(subst -,_,$(PRJ_PACKAGE))-*.whl: $(REQUIREMENTS) $(PYTHON_SRC) | dist/
 	@$(VALIDATE_VENV)
-	export PBR_VERSION=$$(git describe --tags 2>/dev/null | echo "0.0.0")
-	# $(PYTHON) setup.py bdist_wheel
-	pip wheel --no-deps -w dist .
-	# python -m build
+	export PBR_VERSION=$$(git describe --tags 2>/dev/null || echo "v0.0.0")
+	echo "Generate version $${PBR_VERSION}"
+	# Pre-pep517 $(PYTHON) setup.py bdist_wheel
+	#pip wheel --no-deps  --no-build-isolation -w dist .
+	pip wheel -w dist .
+	#python setup.py bdist_wheel
 
 ## Create a binary wheel distribution
 bdist: dist/$(subst -,_,$(PRJ_PACKAGE))-*.whl | dist/

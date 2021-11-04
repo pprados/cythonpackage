@@ -98,10 +98,7 @@ Now, you can build your *compiled* wheel.
 ```shell
 python setup.py bdist_wheel
 ```
-or
-```shell
-python -m build
-```
+
 
 ## Using PBR ([obsolete](https://setuptools.pypa.io/en/latest/userguide/declarative_config.html))
 [PBR](https://docs.openstack.org/pbr/latest/) is a library for managing 
@@ -125,18 +122,23 @@ setup(
     cythonpackage=True,
 )
 ```
+Now, you can build your *compiled* wheel.
+```shell
+python setup.py bdist_wheel
+```
 
 ## Using standard PEP-517
-At this time, the usage of standard PEP-517 is not working.
+With setuptools
 
 ```
-; pyproject.toml NOT WORKING
 [build-system]
-requires = [ "setuptools>=42", "wheel"]
+requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 ```
-The files were not compiled.
-
+and
+```shell
+$ pip wheel --use-pep517 .
+```
 ## Using Poetry
 Poetry propose a new approach to build a *wheel*, compatible with PEP 517.
 At this time, the last version (1.1.*) is not compatible with *cython*
