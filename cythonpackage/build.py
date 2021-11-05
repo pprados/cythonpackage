@@ -36,6 +36,8 @@ _conf = {
 
 def _compile_packages(packages: List[str]) -> List[Extension]:
     extensions: List[Extension] = []
+    if not packages:
+        return extensions
     for package in packages:
         root = Path(package, "__compile__.py")
         if root.exists():

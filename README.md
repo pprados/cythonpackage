@@ -2,8 +2,8 @@
 when we build a distribution.
 
 # Introduction
-Sometime, you want to publish an optimized version of your module.
-Sometime, you don't want to publish the source code.
+- Sometime, you want to publish an optimized version of your pyton module.
+- Sometime, you don't want to publish the source code.
 You can use [PyArmor](https://pyarmor.readthedocs.io/en/latest/), 
 but if you want to keep the API, it's not a good approach.
 
@@ -16,25 +16,42 @@ have ten shared library.
 - The wheel package merge the python source code and the shared library. 
 It's big and not confidential.
 
-We can do better.
+**We can do better.**
 
 Based of the idea presented [here](https://newbedev.com/collapse-multiple-submodules-to-one-cython-extension), 
 this component can help you to continue to use a classical python source code, 
-and generate a single shared library when you create the wheel.
+and generate a single optimized module when you create the wheel.
 
 And, it's VERY SIMPLE to use !
 
 # Usage
-For each package who you want to compile and/or hide the source code, add a file `__compile__.py` with nothing.
-With that, you can continue to use your classical python file or add some `.pyx` files.
+For each package where you want to compile and/or hide the source code, add a file `__compile__.py` with nothing.
+With that, you can continue to use your classical python file (or add some `.pyx` files).
 For the developer point of vue, you continue to use the *interpreted* python code.
 
-In the `setup.cfg`, add `setup_requires` and `cythonpackage=True`:
+Then, to be compatible with [PEP-0517](https://www.python.org/dev/peps/pep-0517/),
+- in the `pyproject.tmp`
+```
+[build-system]
+requires = ["setuptools>=42", "wheel", "cythonpackage[build]"]
+build-backend = "setuptools.build_meta"
+```
+
+- in the `setup.py`:
+```python
+from setuptools import setup, find_packages
+
+setup(
+    setup_requires=['cythonpackage[build]'],
+    cythonpackage=True,
+    packages=find_packages(),
+)
+``` 
+- in the `setup.cfg`, add other projects information:
 ```
 [metadata]
 name = my_compiled_project
-setup_requires=cythonpackage
-cythonpackage=True
+...
 ```
 Now, you can build your *compiled* wheel.
 ```shell
@@ -66,7 +83,7 @@ else:
 ```
 
 Use can try the sample present [here](https://github.com/pprados/test-cythonpackage): https://github.com/pprados/test-cythonpackage
-Try to rename the `pyproject.toml` or `setup_obsolete.py` to test different kind of builds.
+Try to rename the `pyproject.toml` or `setup.py` to test different kind of builds.
 
 ## Multiple architecture
 TODO: a valider
@@ -81,17 +98,18 @@ $ pip install cibuildwheel
 $ python3 -m cibuildwheel --output-dir dist --platform linux
 ```
 
-## Using setup.py ([obsolete](https://setuptools.pypa.io/en/latest/userguide/declarative_config.html))
+## Using setup.py only ([obsolete](https://setuptools.pypa.io/en/latest/userguide/declarative_config.html))
 In the `setup.py`, add `setup_requires` and `cythonpackage=True`:
 
 ```python
 from setuptools import setup, find_packages
 
 setup(
+    name="myname",
+    version="v0.0.0",
     setup_requires=['cythonpackage[build]'],
     cythonpackage=True,
     packages=find_packages(),
-    requires=['cythonpackage'],
 )
 ```
 Now, you can build your *compiled* wheel.
@@ -117,7 +135,7 @@ or `setup.py`
 from setuptools import setup
 
 setup(
-    setup_requires=['pbr','cythonpackage'],
+    setup_requires=['pbr','cythonpackage[build]'],
     pbr=True,
     cythonpackage=True,
 )
@@ -128,17 +146,33 @@ python setup.py bdist_wheel
 ```
 
 ## Using standard PEP-517
-With setuptools
-
+With classical setuptools, 
+- in `pyproject.toml`
 ```
 [build-system]
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 ```
+- in `setup.py`
+```python
+from setuptools import setup, find_packages
+
+setup(
+    setup_requires=['cythonpackage[build]'],
+    cythonpackage=True,
+    packages=find_packages(),
+)
+``` 
+- in the `setup.cfg`, add other projects information:
+```
+[metadata]
+name = my_compiled_project
+...
 and
 ```shell
 $ pip wheel --use-pep517 .
 ```
+
 ## Using Poetry
 Poetry propose a new approach to build a *wheel*, compatible with PEP 517.
 At this time, the last version (1.1.*) is not compatible with *cython*
@@ -161,8 +195,7 @@ packages = [
     { include = "foo2" },
     { include = "foo3" },
 ]
-# Remove source code
-exclude = ["**/[!__]*.py"]
+exclude = ["**/[!__]*.py"] # Remove source code
 build = 'poetry_build.py'
 
 [tool.poetry.dependencies]
@@ -173,7 +206,7 @@ cythonpackage = "*"
 requires = ["poetry-core>=1.2.0a2"]
 build-backend = "poetry.core.masonry.api"
 ```
-and a file `./poetry_build.py` like this:
+and a file `./poetry_build.py`:
 ```python
 import cythonpackage
 def build(setup_kw):
@@ -183,23 +216,10 @@ Then, you can build the package with:
 ```shell
 python -m build
 ```
-
-## Synthesis
-
-| Command | python -m build | pip wheel --no-deps -w dist . | python setup.py bdist_wheel | 
-| ------- | --------------- | ----------------------------- | --------------------------- |
-| setup.py                                                                 | OK | KO | OK |
-| setup.py<br />setup.cfg                                                  | KO | KO | KO |
-| setup.cfg                                                                | KO | KO | KO |
-
-| pyproject.toml[poetry]                                                   | OK | OK | KO |
-| pyproject.toml[poetry]<br />setup.cfg                                    | OK | OK | KO |
-| pyproject.toml[poetry]<br />setup.cfg<br />setup.py[cythonpackage]       | OK | OK | KO |
-| pyproject.toml[poetry]<br />setup.cfg<br />setup.py[pbr,cythonpackage]   | OK | KO | KO |
-
-| pyproject.toml[setuptools]                                               | KO | KO | KO |
-| pyproject.toml[setuptools]<br />setup.cfg                                | KO | KO | KO |
-| pyproject.toml[setuptools]<br />setup.cfg<br />setup.py[cythonpackage]   | KO | KO | KO |
+or
+```shell
+pip wheel --w dist .
+```
 
 # Sample
 The project [test-cythonpackage](https://github.com/pprados/test-cythonpackage) propose a tiny exemple
