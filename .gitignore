@@ -5,7 +5,7 @@ __pycache__
 .env
 .~*
 PPR*
-venv/
+venv*/
 .pytest_cache
 build/
 dist/

@@ -89,17 +89,7 @@ test: bdist
 	export PIP_INDEX_URL=https://test.pypi.org/simple
 	pip install -e .
 	cd test-cythonpackage
-	rm -Rf build dist
-	python setup.py bdist_wheel
-	pip install --force-reinstall dist/*.whl
-	cd ..
-
-	python -c 'import foo.bar_a; foo.bar_a.print_me()'
-	python -c 'import foo.bar_b; foo.bar_b.print_me()'
-	python -c 'import foo.sub.sub; foo.sub.sub.print_me()'
-	python -c 'import foo2.bar_c; foo2.bar_c.print_me()'
-	python -c 'import foo2.bar_d; foo2.bar_d.print_me()'
-	python -c 'import foo3.bar_e; foo3.bar_e.print_me()' || true
+	make test
 
 # Publish the distribution in a local PIP repository
 local-repository:

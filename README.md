@@ -25,7 +25,8 @@ and generate a single optimized module when you create the wheel.
 And, it's VERY SIMPLE to use !
 
 # Usage
-For each package where you want to compile and/or hide the source code, add a file `__compile__.py` with nothing.
+For each package where you want to compile and/or hide the source code, 
+**add a file `__compile__.py` with nothing**.
 With that, you can continue to use your classical python file (or add some `.pyx` files).
 For the developer point of vue, you continue to use the *interpreted* python code.
 
@@ -86,7 +87,6 @@ Use can try the sample present [here](https://github.com/pprados/test-cythonpack
 Try to rename the `pyproject.toml` or `setup.py` to test different kind of builds.
 
 ## Multiple architecture
-TODO: a valider
 The wheel file generated is specific for an architecture and a Python version. 
 The name describe that : test_cythonpackage-0.0.0-cp38-cp38-manylinux_2_31_x86_64.whl
 To be compatible with multiple combinaison of python version or architecture, 
@@ -98,54 +98,37 @@ $ pip install cibuildwheel
 $ python3 -m cibuildwheel --output-dir dist --platform linux
 ```
 
-## Using setup.py only ([obsolete](https://setuptools.pypa.io/en/latest/userguide/declarative_config.html))
-In the `setup.py`, add `setup_requires` and `cythonpackage=True`:
-
-```python
-from setuptools import setup, find_packages
-
-setup(
-    name="myname",
-    version="v0.0.0",
-    setup_requires=['cythonpackage[build]'],
-    cythonpackage=True,
-    packages=find_packages(),
-)
+Use a CI action like github action. You can generate something like:
 ```
-Now, you can build your *compiled* wheel.
-```shell
-python setup.py bdist_wheel
-```
-
-
-## Using PBR ([obsolete](https://setuptools.pypa.io/en/latest/userguide/declarative_config.html))
-[PBR](https://docs.openstack.org/pbr/latest/) is a library for managing 
-setuptools packaging needs in a consistent manner.
-
-You can use use PBR with CythonPackage in `setup.cfg`:
-```
-[metadata]
-name = my_compiled_project
-setup_requires=cythonpackage,pbr
-cythonpackage=True
-pbr=True
-```
-or `setup.py`
-```python
-from setuptools import setup
-
-setup(
-    setup_requires=['pbr','cythonpackage[build]'],
-    pbr=True,
-    cythonpackage=True,
-)
-```
-Now, you can build your *compiled* wheel.
-```shell
-python setup.py bdist_wheel
+test_cythonpackage-0.0.0-cp37-cp37m-macosx_10_15_x86_64.whl
+test_cythonpackage-0.0.0-cp37-cp37m-manylinux_2_12_i686.manylinux_2_5_i686.manylinux1_i686.manylinux2010_i686.whl
+test_cythonpackage-0.0.0-cp37-cp37m-manylinux_2_12_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2010_x86_64.whl
+test_cythonpackage-0.0.0-cp37-cp37m-musllinux_1_1_i686.whl
+test_cythonpackage-0.0.0-cp37-cp37m-musllinux_1_1_x86_64.whl
+test_cythonpackage-0.0.0-cp37-cp37m-win32.whl
+test_cythonpackage-0.0.0-cp37-cp37m-win_amd64.whl
+test_cythonpackage-0.0.0-cp38-cp38-macosx_10_15_x86_64.whl
+test_cythonpackage-0.0.0-cp38-cp38-manylinux_2_12_i686.manylinux_2_5_i686.manylinux1_i686.manylinux2010_i686.whl
+test_cythonpackage-0.0.0-cp38-cp38-manylinux_2_12_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2010_x86_64.whl
+test_cythonpackage-0.0.0-cp38-cp38-musllinux_1_1_i686.whl
+test_cythonpackage-0.0.0-cp38-cp38-musllinux_1_1_x86_64.whl
+test_cythonpackage-0.0.0-cp38-cp38-win32.whl
+test_cythonpackage-0.0.0-cp38-cp38-win_amd64.whl
+test_cythonpackage-0.0.0-cp39-cp39-macosx_10_15_x86_64.whl
+test_cythonpackage-0.0.0-cp39-cp39-manylinux_2_12_i686.manylinux_2_5_i686.manylinux1_i686.manylinux2010_i686.whl
+test_cythonpackage-0.0.0-cp39-cp39-manylinux_2_12_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2010_x86_64.whl
+test_cythonpackage-0.0.0-cp39-cp39-musllinux_1_1_i686.whl
+test_cythonpackage-0.0.0-cp39-cp39-musllinux_1_1_x86_64.whl
+test_cythonpackage-0.0.0-cp39-cp39-win32.whl
+test_cythonpackage-0.0.0-cp39-cp39-win_amd64.whl
+test_cythonpackage-0.0.0-pp37-pypy37_pp73-macosx_10_15_x86_64.whl
+test_cythonpackage-0.0.0-pp37-pypy37_pp73-manylinux_2_12_i686.manylinux_2_5_i686.manylinux1_i686.manylinux2010_i686.whl
+test_cythonpackage-0.0.0-pp37-pypy37_pp73-manylinux_2_12_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2010_x86_64.whl
 ```
 
 ## Using standard PEP-517
+Don't forget to add a file `__compile__.py` with nothing in package to compiled.
+
 With classical setuptools, 
 - in `pyproject.toml`
 ```
@@ -178,6 +161,8 @@ Poetry propose a new approach to build a *wheel*, compatible with PEP 517.
 At this time, the last version (1.1.*) is not compatible with *cython*
 and it's not possible to add a plugin with enough features, 
 but you can use it in a more complex approach:
+
+Don't forget to add a file `__compile__.py` with nothing in package to compiled.
 
 Create a `pyproject.toml` file with something like this:
 ```toml
@@ -218,7 +203,58 @@ python -m build
 ```
 or
 ```shell
-pip wheel --w dist .
+pip wheel -w dist .
+```
+
+## Using setup.py only ([obsolete](https://setuptools.pypa.io/en/latest/userguide/declarative_config.html))
+Don't forget to add a file `__compile__.py` with nothing in package to compiled.
+
+In the `setup.py`, add `setup_requires` and `cythonpackage=True`:
+
+```python
+from setuptools import setup, find_packages
+
+setup(
+    name="myname",
+    version="v0.0.0",
+    setup_requires=['cythonpackage[build]'],
+    cythonpackage=True,
+    packages=find_packages(),
+)
+```
+Now, you can build your *compiled* wheel.
+```shell
+python setup.py bdist_wheel
+```
+
+
+## Using PBR ([obsolete](https://setuptools.pypa.io/en/latest/userguide/declarative_config.html))
+[PBR](https://docs.openstack.org/pbr/latest/) is a library for managing 
+setuptools packaging needs in a consistent manner.
+
+Don't forget to add a file `__compile__.py` with nothing in package to compiled.
+
+You can use use PBR with CythonPackage in `setup.cfg`:
+```
+[metadata]
+name = my_compiled_project
+setup_requires=cythonpackage,pbr
+cythonpackage=True
+pbr=True
+```
+or `setup.py`
+```python
+from setuptools import setup
+
+setup(
+    setup_requires=['pbr','cythonpackage[build]'],
+    pbr=True,
+    cythonpackage=True,
+)
+```
+Now, you can build your *compiled* wheel.
+```shell
+python setup.py bdist_wheel
 ```
 
 # Sample
@@ -295,73 +331,3 @@ You can change these parameters.
 
 # TODO:
 - Add poetry 1.2 plugin when possible
-
-# Test de build
-** Avec setup.py, setup.cfg, pyproject.toml[poetry]
-
-$ pip wheel --no-deps --use-pep517 -w dist .
-=> Correct, nom=cythonpackage-0.0.0.post10.dev0+6f71892-py3-none-any
-
-$ pip wheel --no-deps --no-use-pep517 -w dist .
-=> ERROR: Disabling PEP 517 processing is invalid: project specifies a build backend of poetry.core.masonry.api in pyproject.toml
-
-$ python -m build
-=> Correct (isolé lors du build)
-
-
-
-** Avec setup.py, setup.cfg, pyproject.toml[setuptools]
-$ pip wheel --no-deps --use-pep517 -w dist .
-=> Correct
-
-$ pip wheel --no-deps --no-use-pep517 -w dist .
-=> ERROR: Disabling PEP 517 processing is invalid: project specifies a build backend of poetry.core.masonry.api in pyproject.toml
-
-$ python setup.py bdist_wheel
-=> Correct
-
-$ python -m build
-=> Correct (isolé lors du build)
-
-
-** Avec setup.py[PBR=False], setup.cfg, SANS pyproject.toml
-$ pip wheel --no-deps --use-pep517 -w dist .
-=> Correct
-
-$ pip wheel --no-deps --no-use-pep517 -w dist .
-=> Correct
-
-$ python setup.py bdist_wheel
-=> Correct
-
-$ python -m build
-=> Correct (isolé lors du build)
-
-
-** Avec setup.py[PBR=True], setup.cfg, SANS pyproject.toml
-$ pip wheel --no-deps --use-pep517 -w dist .
-=> Correct
-
-$ pip wheel --no-deps --no-use-pep517 -w dist .
-=> Correct
-
-$ python setup.py bdist_wheel
-=> Correct
-
-$ python -m build
-=> Correct (isolé lors du build)
-
-
-** Avec setup.py[NO], setup.cfg, SANS pyproject.toml
-$ pip wheel --no-deps --use-pep517 -w dist .
-=> Correct
-
-$ pip wheel --no-deps --no-use-pep517 -w dist .
-=> Correct
-
-$ python setup.py bdist_wheel
-=> Correct
-
-$ python -m build
-=> Correct (isolé lors du build)
-
