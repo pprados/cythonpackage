@@ -85,8 +85,8 @@ clean:
 ## Test the usage of cythonpackage
 test: bdist
 # TODO: test differente kind of build/package
-	export PIP_EXTRA_INDEX_URL=https://pypi.org/simple
-	export PIP_INDEX_URL=https://test.pypi.org/simple
+	export PIP_EXTRA_INDEX_URL=https://test.pypi.org/simple
+#	export PIP_INDEX_URL=https://test.pypi.org/simple
 	pip install -e .
 	cd test-cythonpackage
 	make test
@@ -95,6 +95,7 @@ test: bdist
 local-repository:
 	@mkdir -p .repository/$(PRJ)
 	rm -f .repository/$(PRJ)/*
+	ls dist/*.whl
 	( cd .repository/$(PRJ) ; ln -fs ../../dist/*.whl . )
 	echo -e "$(green)export PIP_EXTRA_INDEX_URL=http://localhost:8888/simple$(normal)"
 	echo -e "or use $(green)pip install --index-url http://localhost:8888/simple/$(normal)"
@@ -156,8 +157,7 @@ test-twine: dist check-twine
 	twine upload --sign -i $(SIGN_IDENTITY) --repository-url https://test.pypi.org/legacy/ \
 		$(shell find dist/ -type f \( -name "*.whl" -or -name '*.gz' \) -and ! -iname "*dev*" )
 	echo -e "To the test repositiry"
-	echo -e "$(green)export PIP_INDEX_URL=https://test.pypi.org/simple$(normal)"
-	echo -e "$(green)export PIP_EXTRA_INDEX_URL=https://pypi.org/simple$(normal)"
+	echo -e "$(green)export PIP_EXTRA_INDEX_URL=https://test.pypi.org/simple$(normal)"
 
 .PHONY: keyring release
 

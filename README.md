@@ -2,9 +2,11 @@
 when we build a distribution.
 
 # Introduction
-- Sometime, you want to publish an optimized version of your pyton module.
+- Cython can compile a module but not a package
+- Sometime, you want to publish an optimized version of your python package/module.
 - Sometime, you don't want to publish the source code.
-You can use [PyArmor](https://pyarmor.readthedocs.io/en/latest/), 
+You can use [PyArmor](https://pyarmor.readthedocs.io/en/latest/),
+or [Pyminifier](https://liftoff.github.io/pyminifier/)
 but if you want to keep the API, it's not a good approach.
 
 ## Using cython
@@ -274,8 +276,9 @@ setup(
         "inject_ext_modules": True,
         "inject_init": True,
         "remove_source": True,
-        "compile_pyc": True,
+        "compile_py": True,
         "optimize": 2,
+        "exclude": []  # List of glob
     },
 )
 ```
@@ -319,12 +322,12 @@ version, we remove all the source code of the compiled files.
 
 If you set this parameter to `False`, the source code were inside the whell.
 
-## compile_pyc / optimize
+## compile_py / optimize
 The objectif of this kind of build, it to optimize the usage of the package. Normally, it's possible to compile
 the source code with `python setup.py build_py --compile`. 
 But the `bdist_wheel` can not receive the `--compile` parameter.
 
-With CythonPackage, by default, the `compile` is set to `True`, and the `optimize` is set to `2`
+With CythonPackage, by default, the `compile` is set to `True`, and the `optimize` is set to `1`
 
 You can change these parameters.
 

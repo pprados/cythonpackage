@@ -13,29 +13,33 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
-import importlib
 import io
+import itertools
 import os
-import sys
+from glob import glob
 from pathlib import Path
-from typing import List, Tuple, Optional, Dict, Any, Union
+from typing import List, Tuple, Dict, Any, Union
 
 from Cython.Build import cythonize
 from setuptools import Extension
 from setuptools.command.build_py import build_py as original_build_py
 
-
 _conf = {
-    "inject_ext_modules": True,
+    "ext_modules": True,
     "inject_init": True,
+    "install_requires": False,
     "remove_source": True,
-    "compile_pyc": True,
-    "optimize": 2,
+    "compile_py": True,
+    "optimize": 1,
+    "exclude": []
 }
 
 
-def _compile_packages(packages: List[str]) -> List[Extension]:
+def _compile_packages(conf: Dict[str, Any], packages: List[str]) -> List[Extension]:
     extensions: List[Extension] = []
+    print(f"_compile_packages({packages=})")
+    exclude_files = set(itertools.chain.from_iterable([glob(g) for g in conf["exclude"]]))
+
     if not packages:
         return extensions
     for package in packages:
@@ -46,11 +50,13 @@ def _compile_packages(packages: List[str]) -> List[Extension]:
             sourcefiles += [str(path) for path in Path(package_path).rglob('*.py')
                             if path.name not in ["__init__.py", "__compile__.py"]]
             sourcefiles.append(package_path + "/__compile__.py")
-            # print(f'Extension(name="{package_path}.__compile__", sources={sourcefiles})')
+
+            sourcefiles = [f for f in sourcefiles if f not in exclude_files]
             if sourcefiles:
                 extensions.append(Extension(
                     name=f"{package_path}.__compile__",
                     sources=sourcefiles,
+                    optional=True,
                 ))
     return extensions
 
@@ -60,13 +66,17 @@ class _build_py(original_build_py):
 
     def finalize_options(self):
         super().finalize_options()
-        self.compile = _conf["compile_pyc"]
-        self.optimize = _conf["optimize"]
-        self.remove_source = _conf["remove_source"]
-        self.inject_init = _conf["inject_init"]
+        conf = _conf
+        self.compile = conf["compile_py"]  # Force the pre-compiled python
+        self.optimize = conf["optimize"]
+
+        self.remove_source = conf["remove_source"]
+        self.inject_init = conf["inject_init"]
+        self._exclude = set(itertools.chain.from_iterable([glob(g) for g in conf["exclude"]]))
         self._patched_init = []
 
     def find_package_modules(self, package: str, package_dir: str) -> List[Tuple[str, str, str]]:
+        """ Remove source code """
         modules: List[Tuple[str, str, str]] = super().find_package_modules(package, package_dir)
         if self.remove_source:
             filtered_modules = []
@@ -74,7 +84,8 @@ class _build_py(original_build_py):
                 _path = Path(filepath)
                 if (_path.suffix in [".py", ".pyx"] and
                         "__init__.py" != _path.name and
-                        Path(_path.parent, "__compile__.py").exists()):
+                        filepath not in self._exclude and
+                        Path(_path.parent, "__compile__.py").exists()):  # TODO: use glob ?
                     continue
                 filtered_modules.append((pkg, mod, filepath,))
             return filtered_modules
@@ -82,27 +93,32 @@ class _build_py(original_build_py):
             return modules
 
     def find_data_files(self, package, src_dir):
-        """Return filenames for package's data files in 'src_dir'"""
+        """ Return filenames for package's data files in 'src_dir'"""
         # Remove the source code via the data_files
         data_files = super().find_data_files(package, src_dir)
         if self.remove_source:
             filtered_datas: List[str] = []
-            for f in data_files:
-                _path = Path(f)
+            for filepath in data_files:
+                _path = Path(filepath)
+                if _path.suffix in [".c", ".py", ".pyx"]:
+                    print(f"*** Traite data file {_path}")
                 if (_path.suffix in [".c", ".py", ".pyx"] and
-                        # "__init__.py" != _path.name and
+                        "__init__.py" != _path.name and
+                        filepath in self._exclude and
                         Path(_path.parent, "__compile__.py").exists()):
                     continue
-                filtered_datas.append(f)
+                filtered_datas.append(filepath)
             return filtered_datas
         else:
             return data_files
 
-    def build_module(self, module, module_file, package):
+    def build_module(self, module, module_file, package) -> Tuple[str, int]:
+        """ Inject init() in __init__ files"""
         outfile, copied = super().build_module(module, module_file, package)
         inject = "import cythonpackage; cythonpackage.init(__name__);"
         if self.inject_init:
             if outfile.endswith("__init__.py"):
+                # print(f"**** patch {outfile}")
                 package_file = package.replace('.', '/')
                 if outfile.endswith("__init__.py") and Path(package_file, "__compile__.py").exists():
                     # Patch the __init__.py inject the initialisation
@@ -133,12 +149,12 @@ def build_cythonpackage(setup: Dict[str, Any], conf: Union[bool, Dict[str, Any]]
     if isinstance(conf, dict):
         _conf = {**_conf, **conf}
 
-    if _conf["inject_ext_modules"]:
+    if _conf["ext_modules"]:
         packages = setup.get('packages', [])
         ext_modules = setup.get('ext_modules', [])
-        compiled_module = cythonize(_compile_packages(packages),
+        compiled_module = cythonize(_compile_packages(conf, packages),
                                     compiler_directives={'language_level': 3},
-                                    build_dir="build/cythonpackage"
+                                    build_dir="build/cythonpackage",
                                     )
         if ext_modules:
             ext_modules.extend(compiled_module)
@@ -153,7 +169,7 @@ def build_cythonpackage(setup: Dict[str, Any], conf: Union[bool, Dict[str, Any]]
     install_requires = setup.get('install_requires', [])
     if install_requires is None:
         install_requires = []
-    if 'cythonpackage' not in install_requires:
+    if _conf["install_requires"] and 'cythonpackage' not in install_requires:
         install_requires.append('cythonpackage')
         setup['install_requires'] = install_requires
 
@@ -164,6 +180,3 @@ def build_cythonpackage(setup: Dict[str, Any], conf: Union[bool, Dict[str, Any]]
 # Plugin for setup.py
 def cythonpackage(setup, attr, value: Union[bool, Dict[str, Any]]):
     build_cythonpackage(vars(setup), value)
-
-
-

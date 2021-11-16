@@ -4,7 +4,7 @@ name: Build and upload to PyPI
 on:
   push:
     branches:
-      - master
+      - develop
     tags:
       - v*rc
     paths-ignore:

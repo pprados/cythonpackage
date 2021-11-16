@@ -14,36 +14,69 @@
    limitations under the License.
 """
 import importlib
-# try:
-#     import importlib.abc
-# except:
-#     pass
+import importlib.util
 
 import sys
 
 # Chooses the right init function
-from typing import Optional
+import types
+from importlib.machinery import ModuleSpec
+from importlib.metadata import MetadataPathFinder
+from typing import Optional, List, Sequence, Union
 
 
+# @see importlib.machinery.PathFinder
 class _CythonPackageMetaPathFinder(importlib.abc.MetaPathFinder):
     def __init__(self, name_filter: str, file: str):
         super(_CythonPackageMetaPathFinder, self).__init__()
         self._name_filter = name_filter
         self._file = file
 
+
+    # def Xfind_spec(self, fullname, path, target=None):
+    #     # TODO: manage deprecated
+    #     print(f"\nfind_spec({fullname=},{path=},{target=})")
+    #     try:
+    #         module=fullname[0:fullname.rindex('.')]
+    #     except ValueError:
+    #         module = fullname
+    #     print(f"{module=}")
+    #     x=importlib.machinery.PathFinder.find_spec(module,path,target)
+    #     #
+    #     # x = importlib.machinery.PathFinder().find_spec(module)
+    #     print(f"PathFinder={x=}")
+    #
+    #     # x= importlib.machinery.FileFinder(
+    #     #     "",
+    #     #     (
+    #     #         importlib.machinery.ExtensionFileLoader,
+    #     #         importlib.machinery.EXTENSION_SUFFIXES
+    #     #     )).find_spec(module)
+    #     # print(f"FileFinder={x=}")
+    #     if fullname.startswith(self._name_filter):
+    #         x = importlib.machinery.PathFinder().find_spec(self._name_filter)
+    #     else:
+    #         x = importlib.machinery.PathFinder().find_spec(module)
+    #     return x
+    #
+    #     # return importlib.machinery.PathFinder().find_spec(fullname)
+    #
     def find_module(self, fullname: str, path: str) -> Optional[importlib.machinery.ExtensionFileLoader]:
         if fullname.startswith(self._name_filter):
             # use this extension-file but PyInit-function of another module:
             return importlib.machinery.ExtensionFileLoader(fullname, self._file)
 
 
-_registered_prefix=set()
+_registered_prefix = set()
+
+
 def init(module_name: str) -> None:
     """ Load the compiled module, and invoke the PyInit-function of another module """
     module = importlib.import_module(module_name + '.__compile__')
     prefix = module.__name__.split('.', 1)[0] + "."
     for p in _registered_prefix:
         if prefix.startswith(p):
+            print(f"{prefix=} {p=}")
             break
     else:
         _registered_prefix.add(prefix)
