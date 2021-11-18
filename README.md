@@ -277,13 +277,17 @@ setup(
         "inject_init": True,
         "remove_source": True,
         "compile_py": True,
-        "optimize": 2,
+        "optimize": 1,
         "exclude": []  # List of glob
     },
 )
 ```
 Note: the `install_requires` is automatically extended with `cythonpackage`.
 
+and you can de-activate CythonPackage with the environment variable `CYTHONPACKAGE=false`
+```shell
+CYTHONPACKAGE=false python setup.py bdist_wheel
+```
 ## inject_ext_modules
 Detect all package with `__compile__.py`, and generate a list of `Extension` to generate the compiled version of
 the module `__compile__` with all the source code. But with this, it's important to add an extension in

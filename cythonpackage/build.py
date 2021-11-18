@@ -16,6 +16,7 @@
 import io
 import itertools
 import os
+import warnings
 from glob import glob
 from pathlib import Path
 from typing import List, Tuple, Dict, Any, Union
@@ -145,6 +146,9 @@ def build_cythonpackage(setup: Dict[str, Any], conf: Union[bool, Dict[str, Any]]
     """ Plugin for setuptools """
     global _conf
     if not conf:
+        return
+    if os.environ.get("CYTHONPACKAGE", "True").lower() in ['0', 'false']:
+        warnings.warn("Ignore cythonpackage")
         return
     if isinstance(conf, dict):
         _conf = {**_conf, **conf}
