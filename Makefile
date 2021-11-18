@@ -107,7 +107,7 @@ dist/:
 .PHONY: bdist
 dist/$(subst -,_,$(PRJ_PACKAGE))-*.whl: $(REQUIREMENTS) $(PYTHON_SRC) | dist/
 	@$(VALIDATE_VENV)
-	export PBR_VERSION=$$(git describe --tags 2>/dev/null || echo "v0.0.0")
+	export PBR_VERSION=$${PBR_VERSION:-$$(git describe --tags) }
 	echo "Generate version $${PBR_VERSION}"
 	# Pre-pep517 $(PYTHON) setup.py bdist_wheel
 	#pip wheel --no-deps  --no-build-isolation -w dist .
