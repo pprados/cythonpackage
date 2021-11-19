@@ -76,7 +76,6 @@ def init(module_name: str) -> None:
     prefix = module.__name__.split('.', 1)[0] + "."
     for p in _registered_prefix:
         if prefix.startswith(p):
-            print(f"{prefix=} {p=}")
             break
     else:
         _registered_prefix.add(prefix)
