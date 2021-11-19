@@ -2,7 +2,7 @@
 when we build a distribution.
 
 # Introduction
-- Cython can compile a module but not a package
+- Cython can compile a module but not a package ( a collection of modules )
 - Sometime, you want to publish an optimized version of your python package/module.
 - Sometime, you don't want to publish the source code.
 You can use [PyArmor](https://pyarmor.readthedocs.io/en/latest/),
@@ -47,6 +47,7 @@ from setuptools import setup, find_packages
 setup(
     setup_requires=['cythonpackage[build]'],
     cythonpackage=True,
+    ...
     packages=find_packages(),
 )
 ``` 
@@ -90,7 +91,7 @@ Try to rename the `pyproject.toml` or `setup.py` to test different kind of build
 
 ## Multiple architecture
 The wheel file generated is specific for an architecture and a Python version. 
-The name describe that : test_cythonpackage-0.0.0-cp38-cp38-manylinux_2_31_x86_64.whl
+The name describe that : `test_cythonpackage-0.0.0-cp38-cp38-manylinux_2_31_x86_64.whl`
 To be compatible with multiple combinaison of python version or architecture, 
 you must build wheels for all architecture. 
 Try [cibuildwheel](https://cibuildwheel.readthedocs.io/en/stable/)
@@ -99,6 +100,12 @@ to generate a version of each Operating System and python versions.
 $ pip install cibuildwheel
 $ python3 -m cibuildwheel --output-dir dist --platform linux
 ```
+
+To create a *classical* version of your package, without compilation and with source code, use:
+```shell
+$ CYTHONPACKAGE=false python3 -m setup.py bdist_wheel
+```
+
 
 Use a CI action like github action. You can generate something like:
 ```
@@ -127,9 +134,14 @@ test_cythonpackage-0.0.0-pp37-pypy37_pp73-macosx_10_15_x86_64.whl
 test_cythonpackage-0.0.0-pp37-pypy37_pp73-manylinux_2_12_i686.manylinux_2_5_i686.manylinux1_i686.manylinux2010_i686.whl
 test_cythonpackage-0.0.0-pp37-pypy37_pp73-manylinux_2_12_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2010_x86_64.whl
 ```
+and add a fallback with a classical version with source code.
+```
+test_cythonpackage-0.0.0-py3-none-any.whl
+```
+The [PIP-0425](https://www.python.org/dev/peps/pep-0425/) explain how the best package are selected.
 
 ## Using standard PEP-517
-Don't forget to add a file `__compile__.py` with nothing in package to compiled.
+Don't forget to add a file `__compile__.py` with nothing in package to compile.
 
 With classical setuptools, 
 - in `pyproject.toml`
@@ -261,7 +273,8 @@ python setup.py bdist_wheel
 
 # Sample
 The project [test-cythonpackage](https://github.com/pprados/test-cythonpackage) propose a tiny exemple
-to use CythonPackage, and generate all binary version, with GitHub Action.
+to use CythonPackage, and generate all binary version, 
+with a [GitHub Action](https://docs.github.com/en/actions).
 
 # Advanced usage
 To make this magic, we manipulate some special parameters at different levels. 
@@ -282,17 +295,18 @@ setup(
     },
 )
 ```
-Note: the `install_requires` is automatically extended with `cythonpackage`.
 
 and you can de-activate CythonPackage with the environment variable `CYTHONPACKAGE=false`
 ```shell
 CYTHONPACKAGE=false python setup.py bdist_wheel
 ```
+to generate a *classical* version, without compilation and with python source code.
+
 ## inject_ext_modules
-Detect all package with `__compile__.py`, and generate a list of `Extension` to generate the compiled version of
+Detect all packages with `__compile__.py`, and generate a list of `Extension` to generate the compiled version of
 the module `__compile__` with all the source code. But with this, it's important to add an extension in
 `sys.meta_path` to use only one shared library.
-It's done in the `__init__.py`
+It's done at the begining in all `__init__.py` files.
 
 If you set this parameter to `False`, you must write yourself the `ext_modules` parameter
 ```python
@@ -301,7 +315,7 @@ setup(...
         [
             Extension(
                     name=f"foo.__compile__",
-                    sources=['foo/__compile__.py', 'foo/bar_a.py', 'foo/bar_b.py']
+                    sources=['foo/*.py']
                 )
         ],
         build_dir="build/cythonpackage",
@@ -317,24 +331,36 @@ on the fly, to inject two line:
 import cythonpackage
 cythonpackage.init(__name__)
 ```
-If this manipulation break something, set this parameter to `False` and add yourself these two lines.
+If this manipulation break something, set this parameter to `False` and add yourself these two lines
+at **THE BEGINNING** of the file, before others `import`.
 
 ## remove_source
 Because the shared library is enough to use the package, the source code is not necessary. And, sometime, it's possible
 to have a confusion between the *compiled* version and the *interpreted* version. To be sure to use the *compiled*
 version, we remove all the source code of the compiled files.
 
-If you set this parameter to `False`, the source code were inside the whell.
+If you set this parameter to `False`, the source code were inside the wheel.
 
 ## compile_py / optimize
-The objectif of this kind of build, it to optimize the usage of the package. Normally, it's possible to compile
-the source code with `python setup.py build_py --compile`. 
+The objectif of this kind of build, it to optimize the usage of the package. 
+Normally, it's possible to compile the source code to python-byte-code 
+with `python setup.py build_py --compile`. 
 But the `bdist_wheel` can not receive the `--compile` parameter.
 
-With CythonPackage, by default, the `compile` is set to `True`, and the `optimize` is set to `1`
+With CythonPackage, by default, the `compile` is set to `True`, 
+and the `optimize` is set to `1` to remove the assertions.
 
 You can change these parameters.
 
-
-# TODO:
-- Add poetry 1.2 plugin when possible
+## exclude
+Sometime, a specific python source code can not be compiled with Cython.
+You can exclude this file with a list of glob pattern.
+```python
+setup(
+    setup_requires=['pbr','cythonpackage'],
+    pbr=True,
+    cythonpackage={
+        "exclude": ["foo/*special.py"]  # List of glob
+    },
+)
+```
