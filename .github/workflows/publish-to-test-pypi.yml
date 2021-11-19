@@ -2,9 +2,9 @@ name: Publish Python distributions to TestPyPI
 
 on:
   push:
-    branches:
-      - develop
-      - release/**
+#    branches:
+#      - develop
+#      - release/**
     tags:
       - v*rc
     paths-ignore:
