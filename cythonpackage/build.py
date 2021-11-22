@@ -155,7 +155,7 @@ def build_cythonpackage(setup: Dict[str, Any], conf: Union[bool, Dict[str, Any]]
     if _conf["ext_modules"]:
         packages = setup.get('packages', [])
         ext_modules = setup.get('ext_modules', [])
-        compiled_module = cythonize(_compile_packages(conf, packages),
+        compiled_module = cythonize(_compile_packages(_conf, packages),
                                     compiler_directives={'language_level': 3},
                                     build_dir="build/cythonpackage",
                                     )

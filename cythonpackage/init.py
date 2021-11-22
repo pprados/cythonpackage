@@ -14,6 +14,7 @@
    limitations under the License.
 """
 import importlib
+import importlib.abc as abc  # Never remove this import, else the importlib.abc can not be visible with Python 3.10
 import importlib.util
 
 import sys
@@ -24,7 +25,7 @@ from typing import Optional
 
 
 # @see importlib.machinery.PathFinder
-class _CythonPackageMetaPathFinder(importlib.abc.MetaPathFinder):
+class _CythonPackageMetaPathFinder(abc.MetaPathFinder):
     def __init__(self, name_filter: str, file: str):
         super(_CythonPackageMetaPathFinder, self).__init__()
         self._name_filter = name_filter
