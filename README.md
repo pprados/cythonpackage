@@ -7,7 +7,7 @@ when we build a distribution.
 - Sometime, you don't want to publish the source code.
 You can use [PyArmor](https://pyarmor.readthedocs.io/en/latest/),
 or [Pyminifier](https://liftoff.github.io/pyminifier/)
-but if you want to keep the API, it's not a good approach.
+but if you want to compile the API, it's not a good approach.
 
 ## Using cython
 Cython is complex for the *normal* python developer.

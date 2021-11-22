@@ -19,10 +19,8 @@ import importlib.util
 import sys
 
 # Chooses the right init function
-import types
-from importlib.machinery import ModuleSpec
-from importlib.metadata import MetadataPathFinder
-from typing import Optional, List, Sequence, Union
+# from importlib.machinery import ModuleSpec
+from typing import Optional
 
 
 # @see importlib.machinery.PathFinder

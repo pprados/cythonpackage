@@ -27,7 +27,7 @@
     <option name="PARENT_ENVS" value="true" />
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
-      <env name="CYTHONPACKAGE" value="false" />
+      <env name="PBR_VERSION" value="0.0.0" />
     </envs>
     <option name="SDK_HOME" value="" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test-cythonpackage" />
