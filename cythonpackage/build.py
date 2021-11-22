@@ -38,7 +38,6 @@ _conf = {
 
 def _compile_packages(conf: Dict[str, Any], packages: List[str]) -> List[Extension]:
     extensions: List[Extension] = []
-    print(f"_compile_packages({packages=})")
     exclude_files = set(itertools.chain.from_iterable([glob(g) for g in conf["exclude"]]))
 
     if not packages:
