@@ -19,6 +19,7 @@ import os
 import warnings
 from glob import glob
 from pathlib import Path
+from pprint import pprint
 from typing import List, Tuple, Dict, Any, Union
 
 from Cython.Build import cythonize
@@ -60,7 +61,6 @@ def _compile_packages(conf: Dict[str, Any], packages: List[str]) -> List[Extensi
                 ))
     return extensions
 
-
 class _build_py(original_build_py):
     """ build_py to remove the source file for compiled package """
 
@@ -68,12 +68,17 @@ class _build_py(original_build_py):
         super().finalize_options()
         conf = _conf
         self.compile = conf["compile_py"]  # Force the pre-compiled python
-        self.optimize = conf["optimize"]
+        if not self.compile:
+            self.optimize = 0
+        else:
+            self.optimize = conf["optimize"]
 
         self.remove_source = conf["remove_source"]
         self.inject_init = conf["inject_init"]
         self._exclude = set(itertools.chain.from_iterable([glob(g) for g in conf["exclude"]]))
         self._patched_init = []
+        if os.environ.get("CYTHONPACKAGE_DEBUG","False").lower()=="true":
+            print(f"{self.compile=} {self.optimize=} {self.remove_source=} {self.inject_init=} {self._exclude}")
 
     def find_package_modules(self, package: str, package_dir: str) -> List[Tuple[str, str, str]]:
         """ Remove source code """
@@ -83,7 +88,7 @@ class _build_py(original_build_py):
             for (pkg, mod, filepath) in modules:
                 _path = Path(filepath)
                 if (_path.suffix in [".py", ".pyx"] and
-                        "__init__.py" != _path.name and
+                        ("__init__.py" != _path.name or self.compile) and
                         filepath not in self._exclude and
                         Path(_path.parent, "__compile__.py").exists()):  # TODO: use glob ?
                     continue
@@ -103,7 +108,7 @@ class _build_py(original_build_py):
                 if _path.suffix in [".c", ".py", ".pyx"]:
                     print(f"*** Traite data file {_path}")
                 if (_path.suffix in [".c", ".py", ".pyx"] and
-                        "__init__.py" != _path.name and
+                        ("__init__.py" != _path.name or self.compile) and
                         filepath in self._exclude and
                         Path(_path.parent, "__compile__.py").exists()):
                     continue
@@ -178,7 +183,8 @@ def build_cythonpackage(setup: Dict[str, Any], conf: Union[bool, Dict[str, Any]]
 
     if 'CFLAGS' not in os.environ:
         os.environ['CFLAGS'] = '-O3'
-
+    if os.environ.get("CYTHONPACKAGE_DEBUG", "False").lower() == "true":
+        pprint(setup)
 
 # Plugin for setup.py
 def cythonpackage(setup, attr, value: Union[bool, Dict[str, Any]]):
