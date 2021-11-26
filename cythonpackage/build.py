@@ -61,6 +61,7 @@ def _compile_packages(conf: Dict[str, Any], packages: List[str]) -> List[Extensi
                 ))
     return extensions
 
+
 class _build_py(original_build_py):
     """ build_py to remove the source file for compiled package """
 
@@ -77,7 +78,7 @@ class _build_py(original_build_py):
         self.inject_init = conf["inject_init"]
         self._exclude = set(itertools.chain.from_iterable([glob(g) for g in conf["exclude"]]))
         self._patched_init = []
-        if os.environ.get("CYTHONPACKAGE_DEBUG","False").lower()=="true":
+        if os.environ.get("CYTHONPACKAGE_DEBUG", "False").lower() == "true":
             print(f"{self.compile=} {self.optimize=} {self.remove_source=} {self.inject_init=} {self._exclude}")
 
     def find_package_modules(self, package: str, package_dir: str) -> List[Tuple[str, str, str]]:
@@ -88,9 +89,10 @@ class _build_py(original_build_py):
             for (pkg, mod, filepath) in modules:
                 _path = Path(filepath)
                 if (_path.suffix in [".py", ".pyx"] and
-                        ("__init__.py" != _path.name or self.compile) and
-                        filepath not in self._exclude and
-                        Path(_path.parent, "__compile__.py").exists()):  # TODO: use glob ?
+                        ("__init__.py" != _path.name or self.compile)
+                        # and filepath not in self._exclude ) :
+                        # and Path(_path.parent, "__compile__.py").exists()):
+                ):
                     continue
                 filtered_modules.append((pkg, mod, filepath,))
             return filtered_modules
@@ -105,12 +107,11 @@ class _build_py(original_build_py):
             filtered_datas: List[str] = []
             for filepath in data_files:
                 _path = Path(filepath)
-                if _path.suffix in [".c", ".py", ".pyx"]:
-                    print(f"*** Traite data file {_path}")
-                if (_path.suffix in [".c", ".py", ".pyx"] and
-                        ("__init__.py" != _path.name or self.compile) and
-                        filepath in self._exclude and
-                        Path(_path.parent, "__compile__.py").exists()):
+                if (_path.suffix in [".c", ".py", ".pyx"]
+                        #and filepath in self._exclude
+                        #and ("__init__.py" != _path.name or self.compile) and
+                        and Path(_path.parent, "__compile__.py").exists()
+                ):
                     continue
                 filtered_datas.append(filepath)
             return filtered_datas
@@ -160,10 +161,13 @@ def build_cythonpackage(setup: Dict[str, Any], conf: Union[bool, Dict[str, Any]]
     if _conf["ext_modules"]:
         packages = setup.get('packages', [])
         ext_modules = setup.get('ext_modules', [])
-        compiled_module = cythonize(_compile_packages(_conf, packages),
-                                    compiler_directives={'language_level': 3},
-                                    build_dir="build/cythonpackage",
-                                    )
+        if not packages:
+            warnings.warn("Not packages found")
+        else:
+            compiled_module = cythonize(_compile_packages(_conf, packages),
+                                        compiler_directives={'language_level': 3},
+                                        build_dir="build/cythonpackage",
+                                        )
         if ext_modules:
             ext_modules.extend(compiled_module)
         else:
@@ -185,6 +189,7 @@ def build_cythonpackage(setup: Dict[str, Any], conf: Union[bool, Dict[str, Any]]
         os.environ['CFLAGS'] = '-O3'
     if os.environ.get("CYTHONPACKAGE_DEBUG", "False").lower() == "true":
         pprint(setup)
+
 
 # Plugin for setup.py
 def cythonpackage(setup, attr, value: Union[bool, Dict[str, Any]]):
