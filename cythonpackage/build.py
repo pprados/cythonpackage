@@ -73,13 +73,15 @@ class _build_py(original_build_py):
             self.optimize = 0
         else:
             self.optimize = conf["optimize"]
+        # self.compile=True
+        # self.optimize = 1
 
         self.remove_source = conf["remove_source"]
         self.inject_init = conf["inject_init"]
         self._exclude = set(itertools.chain.from_iterable([glob(g) for g in conf["exclude"]]))
         self._patched_init = []
         if os.environ.get("CYTHONPACKAGE_DEBUG", "False").lower() == "true":
-            print(f"{self.compile=} {self.optimize=} {self.remove_source=} {self.inject_init=} {self._exclude}")
+            print(f"=====> {self.compile=} {self.optimize=} {self.remove_source=} {self.inject_init=} {self._exclude=}")
 
     def find_package_modules(self, package: str, package_dir: str) -> List[Tuple[str, str, str]]:
         """ Remove source code """
@@ -89,7 +91,7 @@ class _build_py(original_build_py):
             for (pkg, mod, filepath) in modules:
                 _path = Path(filepath)
                 if (_path.suffix in [".py", ".pyx"] and
-                        ("__init__.py" != _path.name or self.compile)
+                        ("__init__.py" != _path.name)
                         # and filepath not in self._exclude ) :
                         # and Path(_path.parent, "__compile__.py").exists()):
                 ):
@@ -108,8 +110,6 @@ class _build_py(original_build_py):
             for filepath in data_files:
                 _path = Path(filepath)
                 if (_path.suffix in [".c", ".py", ".pyx"]
-                        #and filepath in self._exclude
-                        #and ("__init__.py" != _path.name or self.compile) and
                         and Path(_path.parent, "__compile__.py").exists()
                 ):
                     continue
@@ -188,6 +188,7 @@ def build_cythonpackage(setup: Dict[str, Any], conf: Union[bool, Dict[str, Any]]
     if 'CFLAGS' not in os.environ:
         os.environ['CFLAGS'] = '-O3'
     if os.environ.get("CYTHONPACKAGE_DEBUG", "False").lower() == "true":
+        print("=====> ", end='')
         pprint(setup)
 
 
