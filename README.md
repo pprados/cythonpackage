@@ -213,7 +213,7 @@ def build(setup_kw):
 ```
 Then, you can build the package with:
 ```shell
-python -m build
+python -m build -w
 ```
 or
 ```shell
@@ -232,6 +232,7 @@ setup(
     name="myname",
     version="v0.0.0",
     setup_requires=['cythonpackage[build]'],
+    install_requires=['cythonpackage'],
     cythonpackage=True,
     packages=find_packages(),
 )
@@ -255,6 +256,10 @@ name = my_compiled_project
 setup_requires=cythonpackage,pbr
 cythonpackage=True
 pbr=True
+...
+[options]
+install_requires =
+    cythonpackage
 ```
 or `setup.py`
 ```python
@@ -362,5 +367,6 @@ setup(
     cythonpackage={
         "exclude": ["foo/*special.py"]  # List of glob
     },
+    install_requires = ["cythonpackage"]
 )
 ```

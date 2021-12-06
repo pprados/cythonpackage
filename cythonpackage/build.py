@@ -29,7 +29,6 @@ from setuptools.command.build_py import build_py as original_build_py
 _conf = {
     "ext_modules": True,
     "inject_init": True,
-    "install_requires": True,
     "remove_source": True,
     "compile_py": True,
     "optimize": 1,
@@ -177,13 +176,6 @@ def build_cythonpackage(setup: Dict[str, Any], conf: Union[bool, Dict[str, Any]]
     cmdclass = setup.get('cmdclass', {})
     cmdclass['build_py'] = _build_py
     setup['cmdclass'] = cmdclass
-
-    install_requires = setup.get('install_requires', [])
-    if install_requires is None:
-        install_requires = []
-    if _conf["install_requires"] and 'cythonpackage' not in install_requires:
-        install_requires.append('cythonpackage')
-        setup['install_requires'] = install_requires
 
     if 'CFLAGS' not in os.environ:
         os.environ['CFLAGS'] = '-O3'
