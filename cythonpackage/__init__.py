@@ -17,6 +17,7 @@ from .init import init
 __all__ = ['init']
 
 try:
+    import setuptools
     from .build import build_cythonpackage, cythonpackage
 
     __all__ = ['init', 'build_cythonpackage', "cythonpackage"]

@@ -29,7 +29,7 @@ from setuptools.command.build_py import build_py as original_build_py
 _conf = {
     "ext_modules": True,
     "inject_init": True,
-    "install_requires": False,
+    "install_requires": True,
     "remove_source": True,
     "compile_py": True,
     "optimize": 1,
