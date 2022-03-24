@@ -7,7 +7,7 @@ when we build a distribution.
 - Sometime, you don't want to publish the source code.
 You can use [PyArmor](https://pyarmor.readthedocs.io/en/latest/),
 or [Pyminifier](https://liftoff.github.io/pyminifier/)
-but if you want to keep the API, it's not a good approach.
+but if you want to compile the API, it's not a good approach.
 
 ## Using cython
 Cython is complex for the *normal* python developer.
@@ -33,7 +33,7 @@ With that, you can continue to use your classical python file (or add some `.pyx
 For the developer point of vue, you continue to use the *interpreted* python code.
 
 Then, to be compatible with [PEP-0517](https://www.python.org/dev/peps/pep-0517/),
-- in the `pyproject.tmp`
+- in the `pyproject.toml`
 ```
 [build-system]
 requires = ["setuptools>=42", "wheel", "cythonpackage[build]"]
@@ -213,7 +213,7 @@ def build(setup_kw):
 ```
 Then, you can build the package with:
 ```shell
-python -m build
+python -m build -w
 ```
 or
 ```shell
@@ -232,6 +232,7 @@ setup(
     name="myname",
     version="v0.0.0",
     setup_requires=['cythonpackage[build]'],
+    install_requires=['cythonpackage'],
     cythonpackage=True,
     packages=find_packages(),
 )
@@ -255,6 +256,10 @@ name = my_compiled_project
 setup_requires=cythonpackage,pbr
 cythonpackage=True
 pbr=True
+...
+[options]
+install_requires =
+    cythonpackage
 ```
 or `setup.py`
 ```python
@@ -362,5 +367,6 @@ setup(
     cythonpackage={
         "exclude": ["foo/*special.py"]  # List of glob
     },
+    install_requires = ["cythonpackage"]
 )
 ```
