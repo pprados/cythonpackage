@@ -33,7 +33,7 @@ With that, you can continue to use your classical python file (or add some `.pyx
 For the developer point of vue, you continue to use the *interpreted* python code.
 
 Then, to be compatible with [PEP-0517](https://www.python.org/dev/peps/pep-0517/),
-- in the `pyproject.tmp`
+- in the `pyproject.toml`
 ```
 [build-system]
 requires = ["setuptools>=42", "wheel", "cythonpackage[build]"]
