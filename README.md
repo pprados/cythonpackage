@@ -1,3 +1,5 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/pprados/cythonpackage)
+
 > Compile automatically pythons package in one shared library and remove the source code
 when we build a distribution.
 
